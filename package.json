@@ -1,0 +1,14 @@
+{
+  "name": "cute-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:core": "npm run dev --workspace services/realtime-db",
+    "dev:sensor": "npm run dev --workspace services/mock-sensor",
+    "dev:web": "npm run dev --workspace apps/mobile-web"
+  }
+}

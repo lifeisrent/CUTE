@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CUTE Dashboard</title>
+    <style>
+      body { margin:0; font-family: Arial, sans-serif; background:#0d0b1f; color:#fff; }
+      .wrap { max-width:780px; margin:0 auto; padding:18px; }
+      .row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+      .card { background:#1e1a35; border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:12px; }
+      .muted { color:rgba(255,255,255,.65); font-size:12px; }
+      .badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; }
+      .ok { background:rgba(0,212,154,.2); color:#00d49a; }
+      .bad { background:rgba(255,69,48,.2); color:#ff4530; }
+      ul { list-style:none; padding:0; margin:0; }
+      li { padding:8px 0; border-bottom:1px solid rgba(255,255,255,.1); }
+      button { border:none; border-radius:10px; padding:9px 12px; font-weight:700; cursor:pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h2>CUTE 실시간 대시보드</h2>
+      <div class="muted">Monitoring + Control (MVP)</div>
+      <div style="margin:10px 0 14px">
+        <span id="conn" class="badge bad">connecting</span>
+      </div>
+
+      <div class="row" id="cards"></div>
+
+      <div class="card" style="margin-top:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <strong>최근 이벤트</strong>
+          <button id="refresh">새로고침</button>
+        </div>
+        <ul id="events"></ul>
+      </div>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>

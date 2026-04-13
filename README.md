@@ -17,5 +17,14 @@
 - `services/realtime-db` : 실시간 데이터 저장/조회 API
 - `services/mock-sensor` : 가짜 센서 이벤트 생성기
 
-## 실행(예정)
-세부 실행 스크립트는 각 서비스 README에 정의.
+## 로컬 실행
+```bash
+npm install
+npm run dev:core   # terminal 1
+npm run dev:sensor # terminal 2
+npm run dev:web    # terminal 3
+```
+
+접속: `http://localhost:3200`
+
+세부는 각 서비스 README 참고.
