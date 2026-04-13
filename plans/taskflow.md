@@ -128,7 +128,17 @@
 
 ---
 
-## 5) 지금 당장 결정할 것
-1. Stage1에서 C와 D를 묶을지 (추천: 묶기)
-2. E는 SSE로 시작할지 WebSocket으로 시작할지 (추천: SSE)
-3. 데이터 저장을 메모리로 시작할지 Redis를 바로 쓸지 (추천: 메모리)
+## 5) 지금 당장 결정할 것 (결정 완료)
+1. Stage1에서 C와 D를 묶을지
+   - 결정: **묶기 (OK)**
+2. E는 SSE로 시작할지 WebSocket으로 시작할지
+   - 결정: **SSE로 MVP 시작**
+3. 데이터 저장을 메모리로 시작할지 Redis를 바로 쓸지
+   - 결정: **메모리 저장으로 시작**
+
+### 5-1) 결정 반영 지침
+- 스트리밍 채널은 `SSE`를 기본으로 구현 (`GET /stream`)
+- 저장소는 `in-memory ring buffer`로 구현
+- 추후 교체 지점 명확화:
+  - SSE -> WebSocket 교체는 E(stream-gateway) 한정
+  - 메모리 -> Redis/Postgres 교체는 D(realtime-db) 한정
