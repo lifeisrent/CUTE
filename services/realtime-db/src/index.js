@@ -8,6 +8,10 @@ const SSE_HEARTBEAT_MS = Number(process.env.SSE_HEARTBEAT_MS || 15000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "*").split(",").map((v) => v.trim()).filter(Boolean);
 const SENSOR_CONTROL_URL = process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control";
 const SENSOR_STATUS_URL = process.env.SENSOR_STATUS_URL || "http://localhost:3100/status";
+const SENSOR_COMM_ON_URL = process.env.SENSOR_COMM_ON_URL || "http://localhost:3100/comm/on";
+const SENSOR_COMM_OFF_URL = process.env.SENSOR_COMM_OFF_URL || "http://localhost:3100/comm/off";
+const SENSOR_LOOP_START_URL = process.env.SENSOR_LOOP_START_URL || "http://localhost:3100/loop/start";
+const SENSOR_LOOP_STOP_URL = process.env.SENSOR_LOOP_STOP_URL || "http://localhost:3100/loop/stop";
 
 app.use(express.json({ limit: "256kb" }));
 app.use(cors({ origin: CORS_ORIGINS.includes("*") ? true : CORS_ORIGINS }));
@@ -112,6 +116,38 @@ app.get("/sensor/status", async (_req, res) => {
     return res.json({ ok: true, ...body });
   } catch (err) {
     return res.status(502).json({ ok: false, errorCode: 4001, error: err?.message || "sensor-status-unreachable" });
+  }
+});
+
+app.post("/sensor/comm", async (req, res) => {
+  const enabled = Boolean(req.body?.enabled);
+  const url = enabled ? SENSOR_COMM_ON_URL : SENSOR_COMM_OFF_URL;
+
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      return res.status(r.status).json({ ok: false, errorCode: 4002, error: body?.error || "sensor-comm-toggle-failed" });
+    }
+    return res.json({ ok: true, commEnabled: body?.commEnabled ?? enabled, state: body?.state || null });
+  } catch (err) {
+    return res.status(502).json({ ok: false, errorCode: 4002, error: err?.message || "sensor-comm-unreachable" });
+  }
+});
+
+app.post("/sensor/loop", async (req, res) => {
+  const running = Boolean(req.body?.running);
+  const url = running ? SENSOR_LOOP_START_URL : SENSOR_LOOP_STOP_URL;
+
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      return res.status(r.status).json({ ok: false, errorCode: 4003, error: body?.error || "sensor-loop-toggle-failed" });
+    }
+    return res.json({ ok: true, loopRunning: body?.loopRunning ?? running, state: body?.state || null });
+  } catch (err) {
+    return res.status(502).json({ ok: false, errorCode: 4003, error: err?.message || "sensor-loop-unreachable" });
   }
 });
 

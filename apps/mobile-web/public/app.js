@@ -25,6 +25,13 @@ const langOptions = document.querySelectorAll(".lang-option");
 const titleEl = document.getElementById("title");
 const subtitleEl = document.getElementById("subtitle");
 
+const sensorControlModal = document.getElementById("sensor-control-modal");
+const btnCommOn = document.getElementById("btn-comm-on");
+const btnCommOff = document.getElementById("btn-comm-off");
+const btnLoopStart = document.getElementById("btn-loop-start");
+const btnLoopStop = document.getElementById("btn-loop-stop");
+const btnModalClose = document.getElementById("btn-modal-close");
+
 function stateClass(stateValue) {
   const v = String(stateValue || "").toUpperCase();
   if (v === "CONNECTED") return "state-connected";
@@ -47,12 +54,14 @@ function renderCards() {
   const cls = stateClass(state.sensorState);
 
   cards.innerHTML = entries.map(([k, e]) => `
-    <div class="card ${cls}">
+    <div class="card ${cls} sensor-card-pressable" data-sensor-key="${k}">
       <div class="muted">${k}</div>
       <div style="font-size:24px; font-weight:900; margin:6px 0;">${e.value} ${e.unit || ""}</div>
       <div class="muted">${new Date(e.timestamp).toLocaleTimeString()}</div>
     </div>
   `).join("");
+
+  attachSensorCardLongPress();
 }
 
 function renderEvents() {
@@ -192,6 +201,33 @@ function connectSse() {
   };
 }
 
+async function sendSensorToggle(kind, enabledOrRunning) {
+  const url = kind === "comm" ? `${state.apiBase}/sensor/comm` : `${state.apiBase}/sensor/loop`;
+  const body = kind === "comm" ? { enabled: enabledOrRunning } : { running: enabledOrRunning };
+
+  try {
+    ackEl.textContent = "sending...";
+    ackEl.className = "badge warn";
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      ackEl.textContent = "send-failed";
+      ackEl.className = "badge bad";
+      showError(kind === "comm" ? 4002 : 4003, `센서 ${kind} 토글 실패(${r.status})`);
+      return;
+    }
+    await fetchSensorStatus();
+    setNetMessage("");
+  } catch {
+    ackEl.textContent = "send-failed";
+    ackEl.className = "badge bad";
+    showError(kind === "comm" ? 4002 : 4003, `센서 ${kind} 토글 실패`);
+  }
+}
+
 async function sendControl(action) {
   try {
     ackEl.textContent = "sending...";
@@ -244,6 +280,39 @@ function applyLang(lang) {
   langMenu.classList.remove("on");
 }
 
+function openSensorControlModal() {
+  sensorControlModal?.classList.add("on");
+}
+
+function closeSensorControlModal() {
+  sensorControlModal?.classList.remove("on");
+}
+
+function attachSensorCardLongPress() {
+  const cardsEls = document.querySelectorAll(".sensor-card-pressable");
+  cardsEls.forEach((el) => {
+    let timer = null;
+
+    const start = () => {
+      timer = setTimeout(() => {
+        openSensorControlModal();
+      }, 450);
+    };
+
+    const cancel = () => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+
+    el.addEventListener("mousedown", start);
+    el.addEventListener("mouseup", cancel);
+    el.addEventListener("mouseleave", cancel);
+    el.addEventListener("touchstart", start, { passive: true });
+    el.addEventListener("touchend", cancel, { passive: true });
+    el.addEventListener("touchcancel", cancel, { passive: true });
+  });
+}
+
 function setView(view) {
   const isDashboard = view === "dashboard";
   viewDashboard.classList.toggle("on", isDashboard);
@@ -264,6 +333,15 @@ function setView(view) {
   document.getElementById("refresh").addEventListener("click", loadInitial);
   document.querySelectorAll(".control-btn").forEach((btn) => {
     btn.addEventListener("click", () => sendControl(btn.dataset.action));
+  });
+
+  btnCommOn?.addEventListener("click", () => sendSensorToggle("comm", true));
+  btnCommOff?.addEventListener("click", () => sendSensorToggle("comm", false));
+  btnLoopStart?.addEventListener("click", () => sendSensorToggle("loop", true));
+  btnLoopStop?.addEventListener("click", () => sendSensorToggle("loop", false));
+  btnModalClose?.addEventListener("click", closeSensorControlModal);
+  sensorControlModal?.addEventListener("click", (e) => {
+    if (e.target === sensorControlModal) closeSensorControlModal();
   });
 
   menuDashboard.addEventListener("click", () => setView("dashboard"));

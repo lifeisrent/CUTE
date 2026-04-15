@@ -98,6 +98,43 @@
       .control-btn { background:#2a2550; color:white; border:1px solid rgba(255,255,255,.15); }
       .view { display:none; }
       .view.on { display:block; }
+      .sensor-card-pressable { cursor:pointer; }
+      .sensor-card-pressable:active { transform: scale(0.995); }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.45);
+        display:none;
+        align-items:flex-end;
+        justify-content:center;
+        z-index: 80;
+      }
+      .modal-backdrop.on { display:flex; }
+      .modal {
+        width:min(520px, 100%);
+        background:#1b1730;
+        border-top-left-radius:16px;
+        border-top-right-radius:16px;
+        border:1px solid rgba(255,255,255,.12);
+        padding:14px;
+      }
+      .modal-title { font-size:14px; font-weight:800; margin-bottom:10px; }
+      .modal-actions { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+      .modal-btn {
+        background:#2a2550;
+        color:white;
+        border:1px solid rgba(255,255,255,.16);
+        border-radius:10px;
+        padding:10px 12px;
+        font-weight:800;
+      }
+      .modal-close {
+        margin-top:10px;
+        width:100%;
+        background:rgba(255,255,255,.08);
+        color:#fff;
+      }
       @media (max-width: 680px) {
         .app { max-width:100%; display:block; }
         .row { grid-template-columns:1fr; }
@@ -193,6 +230,19 @@
         </section>
       </main>
     </div>
+    <div id="sensor-control-modal" class="modal-backdrop">
+      <div class="modal">
+        <div class="modal-title">센서 제어</div>
+        <div class="modal-actions">
+          <button class="modal-btn" id="btn-comm-on">통신 ON</button>
+          <button class="modal-btn" id="btn-comm-off">통신 OFF</button>
+          <button class="modal-btn" id="btn-loop-start">루프 START</button>
+          <button class="modal-btn" id="btn-loop-stop">루프 STOP</button>
+        </div>
+        <button class="modal-btn modal-close" id="btn-modal-close">닫기</button>
+      </div>
+    </div>
+
     <script src="/app.js"></script>
   </body>
 </html>
