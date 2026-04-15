@@ -3,7 +3,8 @@ const state = {
   latest: {},
   events: [],
   lastAck: null,
-  errors: {}
+  errors: {},
+  sensorState: "INIT"
 };
 
 const cards = document.getElementById("cards");
@@ -11,6 +12,7 @@ const eventsEl = document.getElementById("events");
 const connEl = document.getElementById("conn");
 const ackEl = document.getElementById("ack");
 const netmsgEl = document.getElementById("netmsg");
+const sensorStateBadgeEl = document.getElementById("sensor-state-badge");
 
 const menuDashboard = document.getElementById("menu-dashboard");
 const menuLog = document.getElementById("menu-log");
@@ -22,6 +24,16 @@ const langOptions = document.querySelectorAll(".lang-option");
 const titleEl = document.getElementById("title");
 const subtitleEl = document.getElementById("subtitle");
 
+function stateClass(stateValue) {
+  const v = String(stateValue || "").toUpperCase();
+  if (v === "CONNECTED") return "state-connected";
+  if (v === "DISCONNECTED") return "state-disconnected";
+  if (v === "PAUSED") return "state-paused";
+  if (v === "INIT") return "state-init";
+  if (v === "STOPPED") return "state-stopped";
+  return "";
+}
+
 function renderCards() {
   const entries = Object.entries(state.latest)
     .filter(([, e]) => e.type === "power");
@@ -31,8 +43,10 @@ function renderCards() {
     return;
   }
 
+  const cls = stateClass(state.sensorState);
+
   cards.innerHTML = entries.map(([k, e]) => `
-    <div class="card">
+    <div class="card ${cls}">
       <div class="muted">${k}</div>
       <div style="font-size:24px; font-weight:900; margin:6px 0;">${e.value} ${e.unit || ""}</div>
       <div class="muted">${new Date(e.timestamp).toLocaleTimeString()}</div>
@@ -48,6 +62,27 @@ function renderEvents() {
       <div class="muted">${e.sensorId} · ${new Date(e.timestamp).toLocaleTimeString()}</div>
     </li>
   `).join("");
+}
+
+function renderSensorState() {
+  const v = String(state.sensorState || "INIT").toUpperCase();
+  if (!sensorStateBadgeEl) return;
+  sensorStateBadgeEl.textContent = v;
+  if (v === "CONNECTED") {
+    sensorStateBadgeEl.className = "badge ok";
+  } else if (v === "DISCONNECTED") {
+    sensorStateBadgeEl.className = "badge bad";
+  } else if (v === "PAUSED") {
+    sensorStateBadgeEl.className = "badge warn";
+  } else if (v === "INIT") {
+    sensorStateBadgeEl.className = "badge";
+    sensorStateBadgeEl.style.background = "rgba(120,140,255,.18)";
+    sensorStateBadgeEl.style.color = "#9ab0ff";
+  } else {
+    sensorStateBadgeEl.className = "badge";
+    sensorStateBadgeEl.style.background = "rgba(190,190,190,.18)";
+    sensorStateBadgeEl.style.color = "#cfcfcf";
+  }
 }
 
 function renderAck() {
@@ -75,11 +110,28 @@ function showError(code, fallbackMessage = "오류가 발생했습니다.") {
   setNetMessage(`[${code}] ${text}`);
 }
 
+async function fetchSensorStatus() {
+  try {
+    const r = await fetch(`${state.apiBase}/sensor/status`);
+    if (!r.ok) throw new Error(`sensor-status ${r.status}`);
+    const data = await r.json();
+    state.sensorState = data.state || "INIT";
+  } catch {
+    state.sensorState = "DISCONNECTED";
+  }
+  renderSensorState();
+  renderCards();
+}
+
 async function loadInitial() {
   try {
-    const r = await fetch(`${state.apiBase}/events?limit=50`);
-    if (!r.ok) throw new Error(`events ${r.status}`);
-    const data = await r.json();
+    const [eventsResp] = await Promise.all([
+      fetch(`${state.apiBase}/events?limit=50`),
+      fetchSensorStatus()
+    ]);
+
+    if (!eventsResp.ok) throw new Error(`events ${eventsResp.status}`);
+    const data = await eventsResp.json();
     state.events = data.items || [];
     state.latest = data.latestBySensor || {};
     renderCards();
@@ -214,7 +266,10 @@ function setView(view) {
 
   await loadInitial();
   renderAck();
+  renderSensorState();
   setView("dashboard");
   applyLang("ko");
   connectSse();
+
+  setInterval(fetchSensorStatus, 3000);
 })();

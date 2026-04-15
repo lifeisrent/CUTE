@@ -7,6 +7,7 @@ const EVENT_BUFFER_SIZE = Number(process.env.EVENT_BUFFER_SIZE || 5000);
 const SSE_HEARTBEAT_MS = Number(process.env.SSE_HEARTBEAT_MS || 15000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "*").split(",").map((v) => v.trim()).filter(Boolean);
 const SENSOR_CONTROL_URL = process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control";
+const SENSOR_STATUS_URL = process.env.SENSOR_STATUS_URL || "http://localhost:3100/status";
 
 app.use(express.json({ limit: "256kb" }));
 app.use(cors({ origin: CORS_ORIGINS.includes("*") ? true : CORS_ORIGINS }));
@@ -98,6 +99,20 @@ app.get("/events", (req, res) => {
     latestBySensor: Object.fromEntries(latestBySensor.entries()),
     items: events.slice(-limit).reverse(),
   });
+});
+
+// sensor runtime status proxy (from mock-sensor)
+app.get("/sensor/status", async (_req, res) => {
+  try {
+    const r = await fetch(SENSOR_STATUS_URL);
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      return res.status(r.status).json({ ok: false, errorCode: 4001, error: body?.error || "sensor-status-failed" });
+    }
+    return res.json({ ok: true, ...body });
+  } catch (err) {
+    return res.status(502).json({ ok: false, errorCode: 4001, error: err?.message || "sensor-status-unreachable" });
+  }
 });
 
 // E SSE stream endpoint

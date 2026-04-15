@@ -81,6 +81,11 @@
       .lang-option:hover { background:rgba(255,255,255,.08); color:#fff; }
       .row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
       .card { background:#1e1a35; border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:12px; }
+      .state-connected { border-color: rgba(0,212,154,.65) !important; }
+      .state-disconnected { border-color: rgba(255,69,48,.75) !important; }
+      .state-paused { border-color: rgba(245,196,0,.75) !important; }
+      .state-init { border-color: rgba(120,140,255,.65) !important; }
+      .state-stopped { border-color: rgba(190,190,190,.55) !important; }
       .muted { color:rgba(255,255,255,.65); font-size:12px; }
       .badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; }
       .ok { background:rgba(0,212,154,.2); color:#00d49a; }
@@ -163,6 +168,21 @@
         </section>
 
         <section id="view-log" class="view">
+          <div class="card" style="margin-top:12px; margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <strong>센서 상태</strong>
+              <span id="sensor-state-badge" class="badge warn">loading</span>
+            </div>
+            <div class="muted" style="margin-bottom:8px;">Legend</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <span class="badge ok">CONNECTED</span>
+              <span class="badge bad">DISCONNECTED</span>
+              <span class="badge warn">PAUSED</span>
+              <span class="badge" style="background:rgba(120,140,255,.18); color:#9ab0ff;">INIT</span>
+              <span class="badge" style="background:rgba(190,190,190,.18); color:#cfcfcf;">STOPPED</span>
+            </div>
+          </div>
+
           <div class="card" style="margin-top:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <strong>로그</strong>
