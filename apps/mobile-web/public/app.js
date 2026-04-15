@@ -9,6 +9,7 @@ const cards = document.getElementById("cards");
 const eventsEl = document.getElementById("events");
 const connEl = document.getElementById("conn");
 const ackEl = document.getElementById("ack");
+const netmsgEl = document.getElementById("netmsg");
 
 function renderCards() {
   const entries = Object.entries(state.latest);
@@ -44,13 +45,26 @@ function renderAck() {
   ackEl.className = state.lastAck.status === "accepted" ? "badge ok" : "badge bad";
 }
 
+function setNetMessage(msg = "") {
+  if (!netmsgEl) return;
+  netmsgEl.textContent = msg;
+}
+
 async function loadInitial() {
-  const r = await fetch(`${state.apiBase}/events?limit=50`);
-  const data = await r.json();
-  state.events = data.items || [];
-  state.latest = data.latestBySensor || {};
-  renderCards();
-  renderEvents();
+  try {
+    const r = await fetch(`${state.apiBase}/events?limit=50`);
+    if (!r.ok) throw new Error(`events ${r.status}`);
+    const data = await r.json();
+    state.events = data.items || [];
+    state.latest = data.latestBySensor || {};
+    renderCards();
+    renderEvents();
+    setNetMessage("");
+  } catch (err) {
+    setNetMessage("백엔드 연결 실패: API_BASE_URL 또는 CORS_ORIGINS를 확인하세요.");
+    connEl.textContent = "blocked";
+    connEl.className = "badge bad";
+  }
 }
 
 function connectSse() {
@@ -59,6 +73,7 @@ function connectSse() {
   es.addEventListener("ready", () => {
     connEl.textContent = "connected";
     connEl.className = "badge ok";
+    setNetMessage("");
   });
 
   es.addEventListener("sensor.update", (ev) => {
@@ -77,6 +92,7 @@ function connectSse() {
   es.onerror = () => {
     connEl.textContent = "reconnecting";
     connEl.className = "badge bad";
+    setNetMessage("실시간 스트림 연결 실패: backend CORS_ORIGINS에 현재 web 도메인이 포함되어 있는지 확인하세요.");
   };
 }
 
@@ -84,14 +100,22 @@ async function sendControl(action) {
   try {
     ackEl.textContent = "sending...";
     ackEl.className = "badge warn";
-    await fetch(`${state.apiBase}/control`, {
+    const r = await fetch(`${state.apiBase}/control`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target: "mock-1", action })
     });
+    if (!r.ok) {
+      ackEl.textContent = "send-failed";
+      ackEl.className = "badge bad";
+      setNetMessage(`제어 요청 실패(${r.status}): backend 설정(CORS/SENSOR_CONTROL_URL) 확인 필요`);
+      return;
+    }
+    setNetMessage("");
   } catch {
     ackEl.textContent = "send-failed";
     ackEl.className = "badge bad";
+    setNetMessage("제어 요청 실패: API_BASE_URL/CORS_ORIGINS를 확인하세요.");
   }
 }
 
