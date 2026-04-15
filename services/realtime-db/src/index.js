@@ -7,11 +7,25 @@ const EVENT_BUFFER_SIZE = Number(process.env.EVENT_BUFFER_SIZE || 5000);
 const SSE_HEARTBEAT_MS = Number(process.env.SSE_HEARTBEAT_MS || 15000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "*").split(",").map((v) => v.trim()).filter(Boolean);
 const SENSOR_CONTROL_URL = process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control";
-const SENSOR_STATUS_URL = process.env.SENSOR_STATUS_URL || "http://localhost:3100/status";
-const SENSOR_COMM_ON_URL = process.env.SENSOR_COMM_ON_URL || "http://localhost:3100/comm/on";
-const SENSOR_COMM_OFF_URL = process.env.SENSOR_COMM_OFF_URL || "http://localhost:3100/comm/off";
-const SENSOR_LOOP_START_URL = process.env.SENSOR_LOOP_START_URL || "http://localhost:3100/loop/start";
-const SENSOR_LOOP_STOP_URL = process.env.SENSOR_LOOP_STOP_URL || "http://localhost:3100/loop/stop";
+
+function deriveSensorBaseFromControl(controlUrl) {
+  try {
+    const u = new URL(controlUrl);
+    if (u.pathname.endsWith("/control")) {
+      u.pathname = u.pathname.slice(0, -"/control".length);
+    }
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return "http://localhost:3100";
+  }
+}
+
+const SENSOR_BASE_URL = process.env.SENSOR_BASE_URL || deriveSensorBaseFromControl(SENSOR_CONTROL_URL);
+const SENSOR_STATUS_URL = process.env.SENSOR_STATUS_URL || `${SENSOR_BASE_URL}/status`;
+const SENSOR_COMM_ON_URL = process.env.SENSOR_COMM_ON_URL || `${SENSOR_BASE_URL}/comm/on`;
+const SENSOR_COMM_OFF_URL = process.env.SENSOR_COMM_OFF_URL || `${SENSOR_BASE_URL}/comm/off`;
+const SENSOR_LOOP_START_URL = process.env.SENSOR_LOOP_START_URL || `${SENSOR_BASE_URL}/loop/start`;
+const SENSOR_LOOP_STOP_URL = process.env.SENSOR_LOOP_STOP_URL || `${SENSOR_BASE_URL}/loop/stop`;
 
 app.use(express.json({ limit: "256kb" }));
 app.use(cors({ origin: CORS_ORIGINS.includes("*") ? true : CORS_ORIGINS }));
@@ -127,11 +141,11 @@ app.post("/sensor/comm", async (req, res) => {
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const body = await r.json().catch(() => ({}));
     if (!r.ok) {
-      return res.status(r.status).json({ ok: false, errorCode: 4002, error: body?.error || "sensor-comm-toggle-failed" });
+      return res.status(r.status).json({ ok: false, errorCode: 4002, error: body?.error || "sensor-comm-toggle-failed", targetUrl: url });
     }
     return res.json({ ok: true, commEnabled: body?.commEnabled ?? enabled, state: body?.state || null });
   } catch (err) {
-    return res.status(502).json({ ok: false, errorCode: 4002, error: err?.message || "sensor-comm-unreachable" });
+    return res.status(502).json({ ok: false, errorCode: 4002, error: err?.message || "sensor-comm-unreachable", targetUrl: url });
   }
 });
 
@@ -143,11 +157,11 @@ app.post("/sensor/loop", async (req, res) => {
     const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const body = await r.json().catch(() => ({}));
     if (!r.ok) {
-      return res.status(r.status).json({ ok: false, errorCode: 4003, error: body?.error || "sensor-loop-toggle-failed" });
+      return res.status(r.status).json({ ok: false, errorCode: 4003, error: body?.error || "sensor-loop-toggle-failed", targetUrl: url });
     }
     return res.json({ ok: true, loopRunning: body?.loopRunning ?? running, state: body?.state || null });
   } catch (err) {
-    return res.status(502).json({ ok: false, errorCode: 4003, error: err?.message || "sensor-loop-unreachable" });
+    return res.status(502).json({ ok: false, errorCode: 4003, error: err?.message || "sensor-loop-unreachable", targetUrl: url });
   }
 });
 
