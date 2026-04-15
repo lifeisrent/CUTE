@@ -127,6 +127,13 @@ function showError(code, fallbackMessage = "오류가 발생했습니다.") {
   setNetMessage(`[${code}] ${text}`);
 }
 
+function showDetailedError(code, fallbackMessage, detail = "") {
+  const meta = getErrorMeta(code);
+  const base = meta?.userMessage || fallbackMessage;
+  const suffix = detail ? ` ${detail}` : "";
+  setNetMessage(`[${code}] ${base}${suffix}`);
+}
+
 function renderControlDebug(payload) {
   if (!debugControl || !controlDebugBox) return;
   controlDebugBox.classList.add("on");
@@ -233,7 +240,15 @@ async function sendSensorToggle(kind, enabledOrRunning) {
       ackEl.className = "badge bad";
       const extra = payload?.targetUrl ? ` target=${payload.targetUrl}` : "";
       const fallback = payload?.fallbackUrl ? ` fallback=${payload.fallbackUrl}` : "";
-      showError(kind === "comm" ? 4002 : 4003, `센서 ${kind} 토글 실패(${r.status})${extra}${fallback}`);
+
+      const isUrlMismatchCase = r.status === 404 && (payload?.targetUrl || payload?.fallbackUrl);
+      const mismatchGuide = isUrlMismatchCase ? "백엔드 서버의 제어 URL이 일치하지 않습니다." : "";
+
+      showDetailedError(
+        kind === "comm" ? 4002 : 4003,
+        `센서 ${kind} 토글 실패(${r.status})`,
+        `${mismatchGuide}${extra}${fallback}`
+      );
       return;
     }
 
