@@ -13,15 +13,24 @@
         gap:10px;
       }
       .menu-btn {
-        width:76px; height:58px; border-radius:14px; border:none;
+        width:88px; height:66px; border-radius:16px; border:none;
         background:transparent; color:rgba(255,255,255,.72); display:flex; flex-direction:column; align-items:center; justify-content:center;
-        gap:5px; font-size:21px;
+        gap:6px; font-size:23px;
+        outline:none;
+        box-shadow:none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .menu-btn:focus,
+      .menu-btn:focus-visible,
+      .menu-btn:active {
+        outline: none;
+        box-shadow: none;
       }
       .menu-btn .icon {
-        width:22px; height:22px; display:grid; place-items:center;
-        font-size:18px; font-weight:700; line-height:1;
+        width:24px; height:24px; display:grid; place-items:center;
+        font-size:20px; font-weight:700; line-height:1;
       }
-      .menu-btn .label { font-size:11px; color:rgba(255,255,255,.7); font-weight:700; }
+      .menu-btn .label { font-size:13px; color:rgba(255,255,255,.7); font-weight:700; }
       .menu-btn.on { background:rgba(255,255,255,.09); color:#fff; }
       .menu-btn.on .label { color:#fff; }
       .main { flex:1; padding:18px; }
