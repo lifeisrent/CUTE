@@ -2,7 +2,8 @@ const state = {
   apiBase: "",
   latest: {},
   events: [],
-  lastAck: null
+  lastAck: null,
+  errors: {}
 };
 
 const cards = document.getElementById("cards");
@@ -54,6 +55,16 @@ function setNetMessage(msg = "") {
   netmsgEl.textContent = msg;
 }
 
+function getErrorMeta(code) {
+  return state.errors?.[String(code)] || null;
+}
+
+function showError(code, fallbackMessage = "오류가 발생했습니다.") {
+  const meta = getErrorMeta(code);
+  const text = meta?.userMessage || fallbackMessage;
+  setNetMessage(`[${code}] ${text}`);
+}
+
 async function loadInitial() {
   try {
     const r = await fetch(`${state.apiBase}/events?limit=50`);
@@ -65,7 +76,7 @@ async function loadInitial() {
     renderEvents();
     setNetMessage("");
   } catch (err) {
-    setNetMessage("백엔드 연결 실패: API_BASE_URL 또는 CORS_ORIGINS를 확인하세요.");
+    showError(1000, "백엔드 연결 실패: API_BASE_URL 또는 CORS_ORIGINS를 확인하세요.");
     connEl.textContent = "blocked";
     connEl.className = "badge bad";
   }
@@ -96,7 +107,7 @@ function connectSse() {
   es.onerror = () => {
     connEl.textContent = "reconnecting";
     connEl.className = "badge bad";
-    setNetMessage("실시간 스트림 연결 실패: backend CORS_ORIGINS에 현재 web 도메인이 포함되어 있는지 확인하세요.");
+    showError(1001, "실시간 스트림 연결 실패: backend CORS_ORIGINS에 현재 web 도메인이 포함되어 있는지 확인하세요.");
   };
 }
 
@@ -112,20 +123,25 @@ async function sendControl(action) {
     if (!r.ok) {
       ackEl.textContent = "send-failed";
       ackEl.className = "badge bad";
-      setNetMessage(`제어 요청 실패(${r.status}): backend 설정(CORS/SENSOR_CONTROL_URL) 확인 필요`);
+      showError(3001, `제어 요청 실패(${r.status}): backend 설정(CORS/SENSOR_CONTROL_URL) 확인 필요`);
       return;
     }
     setNetMessage("");
   } catch {
     ackEl.textContent = "send-failed";
     ackEl.className = "badge bad";
-    setNetMessage("제어 요청 실패: API_BASE_URL/CORS_ORIGINS를 확인하세요.");
+    showError(3001, "제어 요청 실패: API_BASE_URL/CORS_ORIGINS를 확인하세요.");
   }
 }
 
 (async function boot() {
-  const cfg = await fetch("/config").then((r) => r.json());
+  const [cfg, catalog] = await Promise.all([
+    fetch("/config").then((r) => r.json()),
+    fetch("/error-catalog.json").then((r) => r.json()).catch(() => ({}))
+  ]);
+
   state.apiBase = cfg.apiBaseUrl;
+  state.errors = catalog || {};
 
   document.getElementById("refresh").addEventListener("click", loadInitial);
   document.querySelectorAll(".control-btn").forEach((btn) => {
