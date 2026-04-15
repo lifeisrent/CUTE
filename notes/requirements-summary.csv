@@ -31,3 +31,6 @@
 30,제어 UX,기능,"팝업에 comm on/off 및 loop start/stop 토글 버튼 추가"
 31,디버깅,운영,"mock-sensor 제어 오류 발생 시 원인 분석 용이성 강화 전략 수립"
 32,디버깅,웹앱,"웹 제어 디버깅 난이도 완화를 위한 관측성/추적/리플레이 방안 조사"
+33,제어 추적,백엔드,"sensor comm/loop 제어 응답에 controlTraceId 및 hopResults 포함"
+34,제어 추적,백엔드,"control attempt ring buffer 및 조회 API(/control/attempts) 추가"
+35,디버그 UI,웹앱,"debugControl=1 모드에서 제어 요청/응답 payload 표시"
