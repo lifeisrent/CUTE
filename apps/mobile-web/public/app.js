@@ -12,6 +12,11 @@ const connEl = document.getElementById("conn");
 const ackEl = document.getElementById("ack");
 const netmsgEl = document.getElementById("netmsg");
 
+const menuDashboard = document.getElementById("menu-dashboard");
+const menuLog = document.getElementById("menu-log");
+const viewDashboard = document.getElementById("view-dashboard");
+const viewLog = document.getElementById("view-log");
+
 function renderCards() {
   const entries = Object.entries(state.latest)
     .filter(([, e]) => e.type === "power");
@@ -134,6 +139,14 @@ async function sendControl(action) {
   }
 }
 
+function setView(view) {
+  const isDashboard = view === "dashboard";
+  viewDashboard.classList.toggle("on", isDashboard);
+  viewLog.classList.toggle("on", !isDashboard);
+  menuDashboard.classList.toggle("on", isDashboard);
+  menuLog.classList.toggle("on", !isDashboard);
+}
+
 (async function boot() {
   const [cfg, catalog] = await Promise.all([
     fetch("/config").then((r) => r.json()),
@@ -148,7 +161,11 @@ async function sendControl(action) {
     btn.addEventListener("click", () => sendControl(btn.dataset.action));
   });
 
+  menuDashboard.addEventListener("click", () => setView("dashboard"));
+  menuLog.addEventListener("click", () => setView("log"));
+
   await loadInitial();
   renderAck();
+  setView("dashboard");
   connectSse();
 })();

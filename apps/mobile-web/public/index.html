@@ -6,7 +6,18 @@
     <title>CUTE Dashboard</title>
     <style>
       body { margin:0; font-family: Arial, sans-serif; background:#0d0b1f; color:#fff; }
-      .wrap { max-width:780px; margin:0 auto; padding:18px; }
+      .app { max-width:900px; margin:0 auto; display:flex; min-height:100vh; }
+      .sidebar {
+        width:64px; border-right:1px solid rgba(255,255,255,.12);
+        background:#17132c; display:flex; flex-direction:column; align-items:center; padding:14px 8px;
+        gap:10px;
+      }
+      .menu-btn {
+        width:44px; height:44px; border-radius:12px; border:1px solid rgba(255,255,255,.12);
+        background:#241f43; color:#fff; display:grid; place-items:center; font-size:20px;
+      }
+      .menu-btn.on { background:#3a3270; border-color:rgba(255,255,255,.28); }
+      .main { flex:1; padding:18px; }
       .row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
       .card { background:#1e1a35; border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:12px; }
       .muted { color:rgba(255,255,255,.65); font-size:12px; }
@@ -19,38 +30,55 @@
       button { border:none; border-radius:10px; padding:9px 12px; font-weight:700; cursor:pointer; }
       .controls { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
       .control-btn { background:#2a2550; color:white; border:1px solid rgba(255,255,255,.15); }
+      .view { display:none; }
+      .view.on { display:block; }
+      @media (max-width: 680px) {
+        .app { max-width:100%; }
+        .row { grid-template-columns:1fr; }
+      }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <h2>CUTE 실시간 대시보드</h2>
-      <div class="muted">Monitoring + Control (MVP)</div>
-      <div style="margin:10px 0 8px">
-        <span id="conn" class="badge bad">connecting</span>
-      </div>
-      <div id="netmsg" class="muted" style="margin-bottom:12px; color:#ffb4b4;"></div>
+    <div class="app">
+      <aside class="sidebar">
+        <button id="menu-dashboard" class="menu-btn on" title="메인 대시보드">🏠</button>
+        <button id="menu-log" class="menu-btn" title="로그">📄</button>
+      </aside>
 
-      <div class="row" id="cards"></div>
+      <main class="main">
+        <h2>CUTE 실시간 대시보드</h2>
+        <div class="muted">Monitoring + Control (MVP)</div>
+        <div style="margin:10px 0 8px">
+          <span id="conn" class="badge bad">connecting</span>
+        </div>
+        <div id="netmsg" class="muted" style="margin-bottom:12px; color:#ffb4b4;"></div>
 
-      <div class="card" style="margin-top:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <strong>제어</strong>
-          <span id="ack" class="badge warn">idle</span>
-        </div>
-        <div class="controls">
-          <button class="control-btn" data-action="fan_on">팬 ON</button>
-          <button class="control-btn" data-action="fan_off">팬 OFF</button>
-          <button class="control-btn" data-action="refresh">센서 갱신</button>
-        </div>
-      </div>
+        <section id="view-dashboard" class="view on">
+          <div class="row" id="cards"></div>
 
-      <div class="card" style="margin-top:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-          <strong>최근 이벤트</strong>
-          <button id="refresh">새로고침</button>
-        </div>
-        <ul id="events"></ul>
-      </div>
+          <div class="card" style="margin-top:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <strong>제어</strong>
+              <span id="ack" class="badge warn">idle</span>
+            </div>
+            <div class="controls">
+              <button class="control-btn" data-action="fan_on">팬 ON</button>
+              <button class="control-btn" data-action="fan_off">팬 OFF</button>
+              <button class="control-btn" data-action="refresh">센서 갱신</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-log" class="view">
+          <div class="card" style="margin-top:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <strong>로그</strong>
+              <button id="refresh">새로고침</button>
+            </div>
+            <ul id="events"></ul>
+          </div>
+        </section>
+      </main>
     </div>
     <script src="/app.js"></script>
   </body>
