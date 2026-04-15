@@ -13,7 +13,7 @@
         gap:10px;
       }
       .menu-btn {
-        width:88px; height:66px; border-radius:16px; border:none;
+        width:74px; height:62px; border-radius:14px; border:none;
         background:transparent; color:rgba(255,255,255,.72); display:flex; flex-direction:column; align-items:center; justify-content:center;
         gap:6px; font-size:23px;
         outline:none;
@@ -39,28 +39,46 @@
         align-items:center;
         justify-content:space-between;
         background:#17132c;
-        border:1px solid rgba(255,255,255,.07);
-        border-radius:12px;
-        padding:10px 12px;
-        margin-bottom:12px;
+        border-bottom:1px solid rgba(255,255,255,.07);
+        padding:14px 18px;
+        margin:-18px -18px 12px;
+        min-height:64px;
       }
-      .lang-toggle {
-        display:flex;
-        gap:6px;
-      }
+      .lang-wrap { position:relative; }
       .lang-btn {
         border:none;
         border-radius:8px;
-        padding:6px 10px;
+        padding:7px 10px;
         font-size:12px;
         font-weight:700;
-        background:rgba(255,255,255,.08);
-        color:rgba(255,255,255,.75);
-      }
-      .lang-btn.on {
-        background:rgba(255,255,255,.18);
+        background:rgba(255,255,255,.12);
         color:#fff;
       }
+      .lang-menu {
+        position:absolute;
+        right:0;
+        top:38px;
+        background:#1f1a34;
+        border:1px solid rgba(255,255,255,.12);
+        border-radius:10px;
+        padding:6px;
+        display:none;
+        min-width:110px;
+        z-index:60;
+      }
+      .lang-menu.on { display:block; }
+      .lang-option {
+        width:100%;
+        text-align:left;
+        background:transparent;
+        color:rgba(255,255,255,.82);
+        border:none;
+        border-radius:8px;
+        padding:7px 8px;
+        font-size:12px;
+        font-weight:700;
+      }
+      .lang-option:hover { background:rgba(255,255,255,.08); color:#fff; }
       .row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
       .card { background:#1e1a35; border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:12px; }
       .muted { color:rgba(255,255,255,.65); font-size:12px; }
@@ -85,19 +103,19 @@
           right: 0;
           bottom: 0;
           width: 100%;
-          height: 62px;
+          height: 56px;
           flex-direction: row;
           justify-content: center;
           border-right: none;
           border-top: 1px solid rgba(255,255,255,.06);
           z-index: 50;
-          padding: 8px;
+          padding: 6px;
           background:#17132c;
         }
 
         .main {
           padding: 18px;
-          padding-bottom: 82px;
+          padding-bottom: 74px;
         }
       }
     </style>
@@ -112,12 +130,15 @@
       <main class="main">
         <div class="topbar">
           <div>
-            <div id="title" style="font-size:16px; font-weight:800;">CUTE 실시간 대시보드</div>
+            <div id="title" style="font-size:17px; font-weight:800;">CUTE 대시보드</div>
             <div id="subtitle" class="muted">Monitoring + Control (MVP)</div>
           </div>
-          <div class="lang-toggle">
-            <button id="lang-ko" class="lang-btn on">한국어</button>
-            <button id="lang-en" class="lang-btn">English</button>
+          <div class="lang-wrap">
+            <button id="lang-current" class="lang-btn">한국어 ▾</button>
+            <div id="lang-menu" class="lang-menu">
+              <button class="lang-option" data-lang="ko">한국어</button>
+              <button class="lang-option" data-lang="en">English</button>
+            </div>
           </div>
         </div>
         <div style="margin:10px 0 8px">

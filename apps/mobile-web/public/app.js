@@ -16,8 +16,9 @@ const menuDashboard = document.getElementById("menu-dashboard");
 const menuLog = document.getElementById("menu-log");
 const viewDashboard = document.getElementById("view-dashboard");
 const viewLog = document.getElementById("view-log");
-const langKo = document.getElementById("lang-ko");
-const langEn = document.getElementById("lang-en");
+const langCurrent = document.getElementById("lang-current");
+const langMenu = document.getElementById("lang-menu");
+const langOptions = document.querySelectorAll(".lang-option");
 const titleEl = document.getElementById("title");
 const subtitleEl = document.getElementById("subtitle");
 
@@ -145,16 +146,18 @@ async function sendControl(action) {
 
 const I18N = {
   ko: {
-    title: "CUTE 실시간 대시보드",
+    title: "CUTE 대시보드",
     subtitle: "Monitoring + Control (MVP)",
     menuHome: "홈",
     menuLog: "로그",
+    langLabel: "한국어",
   },
   en: {
-    title: "CUTE Real-time Dashboard",
+    title: "CUTE Dashboard",
     subtitle: "Monitoring + Control (MVP)",
     menuHome: "Home",
     menuLog: "Logs",
+    langLabel: "English",
   }
 };
 
@@ -166,8 +169,8 @@ function applyLang(lang) {
   const logLabel = menuLog.querySelector(".label");
   if (homeLabel) homeLabel.textContent = dict.menuHome;
   if (logLabel) logLabel.textContent = dict.menuLog;
-  langKo.classList.toggle("on", lang === "ko");
-  langEn.classList.toggle("on", lang === "en");
+  langCurrent.textContent = `${dict.langLabel} ▾`;
+  langMenu.classList.remove("on");
 }
 
 function setView(view) {
@@ -194,8 +197,20 @@ function setView(view) {
 
   menuDashboard.addEventListener("click", () => setView("dashboard"));
   menuLog.addEventListener("click", () => setView("log"));
-  langKo.addEventListener("click", () => applyLang("ko"));
-  langEn.addEventListener("click", () => applyLang("en"));
+
+  langCurrent.addEventListener("click", () => {
+    langMenu.classList.toggle("on");
+  });
+
+  langOptions.forEach((btn) => {
+    btn.addEventListener("click", () => applyLang(btn.dataset.lang));
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!langMenu.contains(e.target) && e.target !== langCurrent) {
+      langMenu.classList.remove("on");
+    }
+  });
 
   await loadInitial();
   renderAck();
