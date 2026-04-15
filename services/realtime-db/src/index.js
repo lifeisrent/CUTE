@@ -7,7 +7,31 @@ const EVENT_BUFFER_SIZE = Number(process.env.EVENT_BUFFER_SIZE || 5000);
 const CONTROL_BUFFER_SIZE = Number(process.env.CONTROL_BUFFER_SIZE || 1000);
 const SSE_HEARTBEAT_MS = Number(process.env.SSE_HEARTBEAT_MS || 15000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "*").split(",").map((v) => v.trim()).filter(Boolean);
-const SENSOR_CONTROL_URL = process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control";
+
+function normalizeControlUrl(rawUrl) {
+  const fallback = "http://localhost:3100/control";
+  try {
+    const u = new URL(rawUrl || fallback);
+    if ((u.pathname === "" || u.pathname === "/") && !rawUrl?.endsWith("/control")) {
+      u.pathname = "/control";
+    }
+    // Railway public domain generally expects https
+    if (u.hostname.endsWith(".up.railway.app") && u.protocol === "http:") {
+      u.protocol = "https:";
+    }
+    if (!u.pathname.endsWith("/control")) {
+      // if a custom path is provided, keep it; otherwise enforce /control
+      if (u.pathname === "" || u.pathname === "/") {
+        u.pathname = "/control";
+      }
+    }
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return fallback;
+  }
+}
+
+const SENSOR_CONTROL_URL = normalizeControlUrl(process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control");
 
 function deriveSensorBaseFromControl(controlUrl) {
   try {
@@ -193,29 +217,37 @@ app.post("/sensor/comm", async (req, res) => {
     }
 
     const fallbackAction = enabled ? "comm_on" : "comm_off";
-    const f0 = Date.now();
-    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target });
-    hopResults.push({
-      hop: "core->sensor(fallback)",
-      ok: fallback.ok,
-      status: fallback.status,
-      url: SENSOR_CONTROL_URL,
-      latencyMs: Date.now() - f0,
-      error: fallback.ok ? null : fallback.payload?.error || null,
-    });
+    const fallbackUrls = Array.from(new Set([
+      SENSOR_CONTROL_URL,
+      `${SENSOR_BASE_URL}/control`,
+    ]));
 
-    if (fallback.ok) {
-      const out = {
-        ok: true,
-        controlTraceId,
-        target,
-        commEnabled: fallback.payload?.commEnabled ?? enabled,
-        state: fallback.payload?.state || null,
-        path: "fallback",
-        hopResults,
-      };
-      appendControlAttempt({ ...out, action: fallbackAction, at: new Date().toISOString() });
-      return res.json(out);
+    let fallback = { ok: false, status: 502, payload: { error: "sensor-control-fallback-not-attempted" } };
+    for (const fbUrl of fallbackUrls) {
+      const f0 = Date.now();
+      const attempt = await postJson(fbUrl, { action: fallbackAction, target });
+      hopResults.push({
+        hop: "core->sensor(fallback)",
+        ok: attempt.ok,
+        status: attempt.status,
+        url: fbUrl,
+        latencyMs: Date.now() - f0,
+        error: attempt.ok ? null : attempt.payload?.error || null,
+      });
+      fallback = attempt;
+      if (attempt.ok) {
+        const out = {
+          ok: true,
+          controlTraceId,
+          target,
+          commEnabled: attempt.payload?.commEnabled ?? enabled,
+          state: attempt.payload?.state || null,
+          path: "fallback",
+          hopResults,
+        };
+        appendControlAttempt({ ...out, action: fallbackAction, at: new Date().toISOString() });
+        return res.json(out);
+      }
     }
 
     const failure = {
@@ -280,29 +312,37 @@ app.post("/sensor/loop", async (req, res) => {
     }
 
     const fallbackAction = running ? "loop_start" : "loop_stop";
-    const f0 = Date.now();
-    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target });
-    hopResults.push({
-      hop: "core->sensor(fallback)",
-      ok: fallback.ok,
-      status: fallback.status,
-      url: SENSOR_CONTROL_URL,
-      latencyMs: Date.now() - f0,
-      error: fallback.ok ? null : fallback.payload?.error || null,
-    });
+    const fallbackUrls = Array.from(new Set([
+      SENSOR_CONTROL_URL,
+      `${SENSOR_BASE_URL}/control`,
+    ]));
 
-    if (fallback.ok) {
-      const out = {
-        ok: true,
-        controlTraceId,
-        target,
-        loopRunning: fallback.payload?.loopRunning ?? running,
-        state: fallback.payload?.state || null,
-        path: "fallback",
-        hopResults,
-      };
-      appendControlAttempt({ ...out, action: fallbackAction, at: new Date().toISOString() });
-      return res.json(out);
+    let fallback = { ok: false, status: 502, payload: { error: "sensor-control-fallback-not-attempted" } };
+    for (const fbUrl of fallbackUrls) {
+      const f0 = Date.now();
+      const attempt = await postJson(fbUrl, { action: fallbackAction, target });
+      hopResults.push({
+        hop: "core->sensor(fallback)",
+        ok: attempt.ok,
+        status: attempt.status,
+        url: fbUrl,
+        latencyMs: Date.now() - f0,
+        error: attempt.ok ? null : attempt.payload?.error || null,
+      });
+      fallback = attempt;
+      if (attempt.ok) {
+        const out = {
+          ok: true,
+          controlTraceId,
+          target,
+          loopRunning: attempt.payload?.loopRunning ?? running,
+          state: attempt.payload?.state || null,
+          path: "fallback",
+          hopResults,
+        };
+        appendControlAttempt({ ...out, action: fallbackAction, at: new Date().toISOString() });
+        return res.json(out);
+      }
     }
 
     const failure = {
