@@ -1,12 +1,14 @@
 const state = {
   apiBase: "",
   latest: {},
-  events: []
+  events: [],
+  lastAck: null
 };
 
 const cards = document.getElementById("cards");
 const eventsEl = document.getElementById("events");
 const connEl = document.getElementById("conn");
+const ackEl = document.getElementById("ack");
 
 function renderCards() {
   const entries = Object.entries(state.latest);
@@ -30,6 +32,16 @@ function renderEvents() {
       <div class="muted">${e.sensorId} · ${new Date(e.timestamp).toLocaleTimeString()}</div>
     </li>
   `).join("");
+}
+
+function renderAck() {
+  if (!state.lastAck) {
+    ackEl.textContent = "idle";
+    ackEl.className = "badge warn";
+    return;
+  }
+  ackEl.textContent = `${state.lastAck.action} · ${state.lastAck.status}`;
+  ackEl.className = state.lastAck.status === "accepted" ? "badge ok" : "badge bad";
 }
 
 async function loadInitial() {
@@ -57,10 +69,30 @@ function connectSse() {
     renderEvents();
   });
 
+  es.addEventListener("command.ack", (ev) => {
+    state.lastAck = JSON.parse(ev.data);
+    renderAck();
+  });
+
   es.onerror = () => {
     connEl.textContent = "reconnecting";
     connEl.className = "badge bad";
   };
+}
+
+async function sendControl(action) {
+  try {
+    ackEl.textContent = "sending...";
+    ackEl.className = "badge warn";
+    await fetch(`${state.apiBase}/control`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target: "mock-1", action })
+    });
+  } catch {
+    ackEl.textContent = "send-failed";
+    ackEl.className = "badge bad";
+  }
 }
 
 (async function boot() {
@@ -68,7 +100,11 @@ function connectSse() {
   state.apiBase = cfg.apiBaseUrl;
 
   document.getElementById("refresh").addEventListener("click", loadInitial);
+  document.querySelectorAll(".control-btn").forEach((btn) => {
+    btn.addEventListener("click", () => sendControl(btn.dataset.action));
+  });
 
   await loadInitial();
+  renderAck();
   connectSse();
 })();

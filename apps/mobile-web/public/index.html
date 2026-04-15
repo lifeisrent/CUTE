@@ -13,9 +13,12 @@
       .badge { display:inline-block; padding:4px 8px; border-radius:999px; font-size:12px; }
       .ok { background:rgba(0,212,154,.2); color:#00d49a; }
       .bad { background:rgba(255,69,48,.2); color:#ff4530; }
+      .warn { background:rgba(245,196,0,.18); color:#f5c400; }
       ul { list-style:none; padding:0; margin:0; }
       li { padding:8px 0; border-bottom:1px solid rgba(255,255,255,.1); }
       button { border:none; border-radius:10px; padding:9px 12px; font-weight:700; cursor:pointer; }
+      .controls { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+      .control-btn { background:#2a2550; color:white; border:1px solid rgba(255,255,255,.15); }
     </style>
   </head>
   <body>
@@ -27,6 +30,18 @@
       </div>
 
       <div class="row" id="cards"></div>
+
+      <div class="card" style="margin-top:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <strong>제어</strong>
+          <span id="ack" class="badge warn">idle</span>
+        </div>
+        <div class="controls">
+          <button class="control-btn" data-action="fan_on">팬 ON</button>
+          <button class="control-btn" data-action="fan_off">팬 OFF</button>
+          <button class="control-btn" data-action="refresh">센서 갱신</button>
+        </div>
+      </div>
 
       <div class="card" style="margin-top:12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
