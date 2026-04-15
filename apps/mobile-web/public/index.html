@@ -8,7 +8,7 @@
       body { margin:0; font-family: Arial, sans-serif; background:#0d0b1f; color:#fff; }
       .app { max-width:900px; margin:0 auto; display:flex; min-height:100vh; }
       .sidebar {
-        width:64px; border-right:1px solid rgba(255,255,255,.12);
+        width:64px; border-right:1px solid rgba(255,255,255,.07);
         background:#17132c; display:flex; flex-direction:column; align-items:center; padding:14px 8px;
         gap:10px;
       }
@@ -34,6 +34,33 @@
       .menu-btn.on { background:rgba(255,255,255,.09); color:#fff; }
       .menu-btn.on .label { color:#fff; }
       .main { flex:1; padding:18px; }
+      .topbar {
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        background:#17132c;
+        border:1px solid rgba(255,255,255,.07);
+        border-radius:12px;
+        padding:10px 12px;
+        margin-bottom:12px;
+      }
+      .lang-toggle {
+        display:flex;
+        gap:6px;
+      }
+      .lang-btn {
+        border:none;
+        border-radius:8px;
+        padding:6px 10px;
+        font-size:12px;
+        font-weight:700;
+        background:rgba(255,255,255,.08);
+        color:rgba(255,255,255,.75);
+      }
+      .lang-btn.on {
+        background:rgba(255,255,255,.18);
+        color:#fff;
+      }
       .row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
       .card { background:#1e1a35; border:1px solid rgba(255,255,255,.15); border-radius:14px; padding:12px; }
       .muted { color:rgba(255,255,255,.65); font-size:12px; }
@@ -58,11 +85,11 @@
           right: 0;
           bottom: 0;
           width: 100%;
-          height: 72px;
+          height: 62px;
           flex-direction: row;
           justify-content: center;
           border-right: none;
-          border-top: 1px solid rgba(255,255,255,.12);
+          border-top: 1px solid rgba(255,255,255,.06);
           z-index: 50;
           padding: 8px;
           background:#17132c;
@@ -70,7 +97,7 @@
 
         .main {
           padding: 18px;
-          padding-bottom: 96px;
+          padding-bottom: 82px;
         }
       }
     </style>
@@ -83,8 +110,16 @@
       </aside>
 
       <main class="main">
-        <h2>CUTE 실시간 대시보드</h2>
-        <div class="muted">Monitoring + Control (MVP)</div>
+        <div class="topbar">
+          <div>
+            <div id="title" style="font-size:16px; font-weight:800;">CUTE 실시간 대시보드</div>
+            <div id="subtitle" class="muted">Monitoring + Control (MVP)</div>
+          </div>
+          <div class="lang-toggle">
+            <button id="lang-ko" class="lang-btn on">한국어</button>
+            <button id="lang-en" class="lang-btn">English</button>
+          </div>
+        </div>
         <div style="margin:10px 0 8px">
           <span id="conn" class="badge bad">connecting</span>
         </div>

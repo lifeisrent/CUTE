@@ -16,6 +16,10 @@ const menuDashboard = document.getElementById("menu-dashboard");
 const menuLog = document.getElementById("menu-log");
 const viewDashboard = document.getElementById("view-dashboard");
 const viewLog = document.getElementById("view-log");
+const langKo = document.getElementById("lang-ko");
+const langEn = document.getElementById("lang-en");
+const titleEl = document.getElementById("title");
+const subtitleEl = document.getElementById("subtitle");
 
 function renderCards() {
   const entries = Object.entries(state.latest)
@@ -139,6 +143,33 @@ async function sendControl(action) {
   }
 }
 
+const I18N = {
+  ko: {
+    title: "CUTE 실시간 대시보드",
+    subtitle: "Monitoring + Control (MVP)",
+    menuHome: "홈",
+    menuLog: "로그",
+  },
+  en: {
+    title: "CUTE Real-time Dashboard",
+    subtitle: "Monitoring + Control (MVP)",
+    menuHome: "Home",
+    menuLog: "Logs",
+  }
+};
+
+function applyLang(lang) {
+  const dict = I18N[lang] || I18N.ko;
+  titleEl.textContent = dict.title;
+  subtitleEl.textContent = dict.subtitle;
+  const homeLabel = menuDashboard.querySelector(".label");
+  const logLabel = menuLog.querySelector(".label");
+  if (homeLabel) homeLabel.textContent = dict.menuHome;
+  if (logLabel) logLabel.textContent = dict.menuLog;
+  langKo.classList.toggle("on", lang === "ko");
+  langEn.classList.toggle("on", lang === "en");
+}
+
 function setView(view) {
   const isDashboard = view === "dashboard";
   viewDashboard.classList.toggle("on", isDashboard);
@@ -163,9 +194,12 @@ function setView(view) {
 
   menuDashboard.addEventListener("click", () => setView("dashboard"));
   menuLog.addEventListener("click", () => setView("log"));
+  langKo.addEventListener("click", () => applyLang("ko"));
+  langEn.addEventListener("click", () => applyLang("en"));
 
   await loadInitial();
   renderAck();
   setView("dashboard");
+  applyLang("ko");
   connectSse();
 })();
