@@ -6,6 +6,7 @@ const PORT = Number(process.env.PORT || 3000);
 const EVENT_BUFFER_SIZE = Number(process.env.EVENT_BUFFER_SIZE || 5000);
 const SSE_HEARTBEAT_MS = Number(process.env.SSE_HEARTBEAT_MS || 15000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "*").split(",").map((v) => v.trim()).filter(Boolean);
+const SENSOR_CONTROL_URL = process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control";
 
 app.use(express.json({ limit: "256kb" }));
 app.use(cors({ origin: CORS_ORIGINS.includes("*") ? true : CORS_ORIGINS }));
@@ -123,18 +124,42 @@ app.get("/stream", (req, res) => {
   });
 });
 
-// control stub
-app.post("/control", (req, res) => {
+// control route -> relay to mock-sensor control
+app.post("/control", async (req, res) => {
   const commandId = id("cmd");
-  const ack = {
+  const action = req.body?.action || "noop";
+  const target = req.body?.target || "mock-1";
+
+  const ackBase = {
     commandId,
-    status: "accepted",
-    target: req.body?.target || "mock-1",
-    action: req.body?.action || "noop",
+    target,
+    action,
     at: new Date().toISOString(),
   };
-  publishSse("command.ack", ack);
-  res.json({ ok: true, ...ack });
+
+  try {
+    const r = await fetch(SENSOR_CONTROL_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target, action }),
+    });
+
+    const body = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      const ack = { ...ackBase, status: "rejected", reason: body?.error || `sensor-control-${r.status}` };
+      publishSse("command.ack", ack);
+      return res.status(r.status).json({ ok: false, ...ack });
+    }
+
+    const ack = { ...ackBase, status: "accepted", applied: body?.applied ?? true, sensorState: body?.controlState || null };
+    publishSse("command.ack", ack);
+    return res.json({ ok: true, ...ack });
+  } catch (err) {
+    const ack = { ...ackBase, status: "error", reason: err?.message || "sensor-control-unreachable" };
+    publishSse("command.ack", ack);
+    return res.status(502).json({ ok: false, ...ack });
+  }
 });
 
 app.listen(PORT, () => {
