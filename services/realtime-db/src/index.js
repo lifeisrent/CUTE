@@ -4,6 +4,7 @@ import cors from "cors";
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 const EVENT_BUFFER_SIZE = Number(process.env.EVENT_BUFFER_SIZE || 5000);
+const CONTROL_BUFFER_SIZE = Number(process.env.CONTROL_BUFFER_SIZE || 1000);
 const SSE_HEARTBEAT_MS = Number(process.env.SSE_HEARTBEAT_MS || 15000);
 const CORS_ORIGINS = (process.env.CORS_ORIGINS || "*").split(",").map((v) => v.trim()).filter(Boolean);
 const SENSOR_CONTROL_URL = process.env.SENSOR_CONTROL_URL || "http://localhost:3100/control";
@@ -31,6 +32,7 @@ app.use(express.json({ limit: "256kb" }));
 app.use(cors({ origin: CORS_ORIGINS.includes("*") ? true : CORS_ORIGINS }));
 
 const events = [];
+const controlAttempts = [];
 const latestBySensor = new Map();
 const clients = new Set();
 
@@ -65,6 +67,11 @@ function appendEvent(e) {
   events.push(e);
   if (events.length > EVENT_BUFFER_SIZE) events.shift();
   latestBySensor.set(`${e.sensorId}:${e.type}`, e);
+}
+
+function appendControlAttempt(a) {
+  controlAttempts.push(a);
+  if (controlAttempts.length > CONTROL_BUFFER_SIZE) controlAttempts.shift();
 }
 
 function publishSse(type, payload) {
@@ -129,6 +136,15 @@ app.get("/events", (req, res) => {
   });
 });
 
+app.get("/control/attempts", (req, res) => {
+  const limit = Math.max(1, Math.min(CONTROL_BUFFER_SIZE, Number(req.query.limit || 50)));
+  res.json({
+    ok: true,
+    count: Math.min(limit, controlAttempts.length),
+    items: controlAttempts.slice(-limit).reverse(),
+  });
+});
+
 // sensor runtime status proxy (from mock-sensor)
 app.get("/sensor/status", async (_req, res) => {
   try {
@@ -146,68 +162,174 @@ app.get("/sensor/status", async (_req, res) => {
 app.post("/sensor/comm", async (req, res) => {
   const enabled = Boolean(req.body?.enabled);
   const url = enabled ? SENSOR_COMM_ON_URL : SENSOR_COMM_OFF_URL;
+  const controlTraceId = req.body?.controlTraceId || id("ctl");
+  const target = req.body?.target || "mock-1";
+  const hopResults = [];
 
   try {
+    const p0 = Date.now();
     const primary = await postJson(url, {});
+    hopResults.push({
+      hop: "core->sensor(primary)",
+      ok: primary.ok,
+      status: primary.status,
+      url,
+      latencyMs: Date.now() - p0,
+      error: primary.ok ? null : primary.payload?.error || null,
+    });
+
     if (primary.ok) {
-      return res.json({ ok: true, commEnabled: primary.payload?.commEnabled ?? enabled, state: primary.payload?.state || null });
+      const out = {
+        ok: true,
+        controlTraceId,
+        target,
+        commEnabled: primary.payload?.commEnabled ?? enabled,
+        state: primary.payload?.state || null,
+        path: "primary",
+        hopResults,
+      };
+      appendControlAttempt({ ...out, action: enabled ? "comm_on" : "comm_off", at: new Date().toISOString() });
+      return res.json(out);
     }
 
-    // fallback: legacy/locked routing where only /control is reachable
     const fallbackAction = enabled ? "comm_on" : "comm_off";
-    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target: "mock-1" });
+    const f0 = Date.now();
+    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target });
+    hopResults.push({
+      hop: "core->sensor(fallback)",
+      ok: fallback.ok,
+      status: fallback.status,
+      url: SENSOR_CONTROL_URL,
+      latencyMs: Date.now() - f0,
+      error: fallback.ok ? null : fallback.payload?.error || null,
+    });
+
     if (fallback.ok) {
-      return res.json({
+      const out = {
         ok: true,
+        controlTraceId,
+        target,
         commEnabled: fallback.payload?.commEnabled ?? enabled,
         state: fallback.payload?.state || null,
-        fallback: true,
-      });
+        path: "fallback",
+        hopResults,
+      };
+      appendControlAttempt({ ...out, action: fallbackAction, at: new Date().toISOString() });
+      return res.json(out);
     }
 
-    return res.status(primary.status || fallback.status || 502).json({
+    const failure = {
       ok: false,
+      controlTraceId,
+      target,
       errorCode: 4002,
       error: primary.payload?.error || fallback.payload?.error || "sensor-comm-toggle-failed",
       targetUrl: url,
       fallbackUrl: SENSOR_CONTROL_URL,
-    });
+      hopResults,
+    };
+    appendControlAttempt({ ...failure, action: fallbackAction, at: new Date().toISOString() });
+    return res.status(primary.status || fallback.status || 502).json(failure);
   } catch (err) {
-    return res.status(502).json({ ok: false, errorCode: 4002, error: err?.message || "sensor-comm-unreachable", targetUrl: url, fallbackUrl: SENSOR_CONTROL_URL });
+    const failure = {
+      ok: false,
+      controlTraceId,
+      target,
+      errorCode: 4002,
+      error: err?.message || "sensor-comm-unreachable",
+      targetUrl: url,
+      fallbackUrl: SENSOR_CONTROL_URL,
+      hopResults,
+    };
+    appendControlAttempt({ ...failure, action: enabled ? "comm_on" : "comm_off", at: new Date().toISOString() });
+    return res.status(502).json(failure);
   }
 });
 
 app.post("/sensor/loop", async (req, res) => {
   const running = Boolean(req.body?.running);
   const url = running ? SENSOR_LOOP_START_URL : SENSOR_LOOP_STOP_URL;
+  const controlTraceId = req.body?.controlTraceId || id("ctl");
+  const target = req.body?.target || "mock-1";
+  const hopResults = [];
 
   try {
+    const p0 = Date.now();
     const primary = await postJson(url, {});
+    hopResults.push({
+      hop: "core->sensor(primary)",
+      ok: primary.ok,
+      status: primary.status,
+      url,
+      latencyMs: Date.now() - p0,
+      error: primary.ok ? null : primary.payload?.error || null,
+    });
+
     if (primary.ok) {
-      return res.json({ ok: true, loopRunning: primary.payload?.loopRunning ?? running, state: primary.payload?.state || null });
+      const out = {
+        ok: true,
+        controlTraceId,
+        target,
+        loopRunning: primary.payload?.loopRunning ?? running,
+        state: primary.payload?.state || null,
+        path: "primary",
+        hopResults,
+      };
+      appendControlAttempt({ ...out, action: running ? "loop_start" : "loop_stop", at: new Date().toISOString() });
+      return res.json(out);
     }
 
-    // fallback: legacy/locked routing where only /control is reachable
     const fallbackAction = running ? "loop_start" : "loop_stop";
-    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target: "mock-1" });
+    const f0 = Date.now();
+    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target });
+    hopResults.push({
+      hop: "core->sensor(fallback)",
+      ok: fallback.ok,
+      status: fallback.status,
+      url: SENSOR_CONTROL_URL,
+      latencyMs: Date.now() - f0,
+      error: fallback.ok ? null : fallback.payload?.error || null,
+    });
+
     if (fallback.ok) {
-      return res.json({
+      const out = {
         ok: true,
+        controlTraceId,
+        target,
         loopRunning: fallback.payload?.loopRunning ?? running,
         state: fallback.payload?.state || null,
-        fallback: true,
-      });
+        path: "fallback",
+        hopResults,
+      };
+      appendControlAttempt({ ...out, action: fallbackAction, at: new Date().toISOString() });
+      return res.json(out);
     }
 
-    return res.status(primary.status || fallback.status || 502).json({
+    const failure = {
       ok: false,
+      controlTraceId,
+      target,
       errorCode: 4003,
       error: primary.payload?.error || fallback.payload?.error || "sensor-loop-toggle-failed",
       targetUrl: url,
       fallbackUrl: SENSOR_CONTROL_URL,
-    });
+      hopResults,
+    };
+    appendControlAttempt({ ...failure, action: fallbackAction, at: new Date().toISOString() });
+    return res.status(primary.status || fallback.status || 502).json(failure);
   } catch (err) {
-    return res.status(502).json({ ok: false, errorCode: 4003, error: err?.message || "sensor-loop-unreachable", targetUrl: url, fallbackUrl: SENSOR_CONTROL_URL });
+    const failure = {
+      ok: false,
+      controlTraceId,
+      target,
+      errorCode: 4003,
+      error: err?.message || "sensor-loop-unreachable",
+      targetUrl: url,
+      fallbackUrl: SENSOR_CONTROL_URL,
+      hopResults,
+    };
+    appendControlAttempt({ ...failure, action: running ? "loop_start" : "loop_stop", at: new Date().toISOString() });
+    return res.status(502).json(failure);
   }
 });
 

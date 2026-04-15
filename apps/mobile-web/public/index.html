@@ -98,6 +98,8 @@
       .control-btn { background:#2a2550; color:white; border:1px solid rgba(255,255,255,.15); }
       .view { display:none; }
       .view.on { display:block; }
+      .debug-box { margin-top:10px; padding:10px; border-radius:10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); font-size:12px; white-space:pre-wrap; word-break:break-word; display:none; }
+      .debug-box.on { display:block; }
       .sensor-card-pressable { cursor:pointer; }
       .sensor-card-pressable:active { transform: scale(0.995); }
 
@@ -226,6 +228,7 @@
               <button id="refresh">새로고침</button>
             </div>
             <ul id="events"></ul>
+            <div id="control-debug-box" class="debug-box"></div>
           </div>
         </section>
       </main>

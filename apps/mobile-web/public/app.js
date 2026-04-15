@@ -31,6 +31,8 @@ const btnCommOff = document.getElementById("btn-comm-off");
 const btnLoopStart = document.getElementById("btn-loop-start");
 const btnLoopStop = document.getElementById("btn-loop-stop");
 const btnModalClose = document.getElementById("btn-modal-close");
+const controlDebugBox = document.getElementById("control-debug-box");
+const debugControl = new URLSearchParams(location.search).get("debugControl") === "1";
 
 function stateClass(stateValue) {
   const v = String(stateValue || "").toUpperCase();
@@ -125,6 +127,12 @@ function showError(code, fallbackMessage = "오류가 발생했습니다.") {
   setNetMessage(`[${code}] ${text}`);
 }
 
+function renderControlDebug(payload) {
+  if (!debugControl || !controlDebugBox) return;
+  controlDebugBox.classList.add("on");
+  controlDebugBox.textContent = JSON.stringify(payload, null, 2);
+}
+
 async function fetchSensorStatus() {
   try {
     const r = await fetch(`${state.apiBase}/sensor/status`);
@@ -203,7 +211,10 @@ function connectSse() {
 
 async function sendSensorToggle(kind, enabledOrRunning) {
   const url = kind === "comm" ? `${state.apiBase}/sensor/comm` : `${state.apiBase}/sensor/loop`;
-  const body = kind === "comm" ? { enabled: enabledOrRunning } : { running: enabledOrRunning };
+  const controlTraceId = `ctl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const body = kind === "comm"
+    ? { enabled: enabledOrRunning, target: "mock-1", controlTraceId }
+    : { running: enabledOrRunning, target: "mock-1", controlTraceId };
 
   try {
     ackEl.textContent = "sending...";
@@ -213,15 +224,31 @@ async function sendSensorToggle(kind, enabledOrRunning) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body)
     });
+
+    const payload = await r.json().catch(() => ({}));
+    renderControlDebug({ kind, request: body, responseStatus: r.status, response: payload });
+
     if (!r.ok) {
       ackEl.textContent = "send-failed";
       ackEl.className = "badge bad";
-      showError(kind === "comm" ? 4002 : 4003, `센서 ${kind} 토글 실패(${r.status})`);
+      const extra = payload?.targetUrl ? ` target=${payload.targetUrl}` : "";
+      const fallback = payload?.fallbackUrl ? ` fallback=${payload.fallbackUrl}` : "";
+      showError(kind === "comm" ? 4002 : 4003, `센서 ${kind} 토글 실패(${r.status})${extra}${fallback}`);
       return;
     }
+
+    state.lastAck = {
+      action: kind === "comm"
+        ? (enabledOrRunning ? "comm_on" : "comm_off")
+        : (enabledOrRunning ? "loop_start" : "loop_stop"),
+      status: "accepted"
+    };
+    renderAck();
+
     await fetchSensorStatus();
     setNetMessage("");
-  } catch {
+  } catch (err) {
+    renderControlDebug({ kind, request: body, error: err?.message || "unknown" });
     ackEl.textContent = "send-failed";
     ackEl.className = "badge bad";
     showError(kind === "comm" ? 4002 : 4003, `센서 ${kind} 토글 실패`);
