@@ -12,11 +12,14 @@ const ackEl = document.getElementById("ack");
 const netmsgEl = document.getElementById("netmsg");
 
 function renderCards() {
-  const entries = Object.entries(state.latest);
+  const entries = Object.entries(state.latest)
+    .filter(([, e]) => e.type === "power");
+
   if (!entries.length) {
-    cards.innerHTML = `<div class="card" style="grid-column:1/-1">아직 데이터가 없어요.</div>`;
+    cards.innerHTML = `<div class="card" style="grid-column:1/-1">POWER 데이터가 아직 없어요.</div>`;
     return;
   }
+
   cards.innerHTML = entries.map(([k, e]) => `
     <div class="card">
       <div class="muted">${k}</div>
@@ -27,7 +30,8 @@ function renderCards() {
 }
 
 function renderEvents() {
-  eventsEl.innerHTML = state.events.slice(0, 30).map((e) => `
+  const powerEvents = state.events.filter((e) => e.type === "power");
+  eventsEl.innerHTML = powerEvents.slice(0, 30).map((e) => `
     <li>
       <div><b>${e.type}</b> · ${e.value}${e.unit || ""}</div>
       <div class="muted">${e.sensorId} · ${new Date(e.timestamp).toLocaleTimeString()}</div>
