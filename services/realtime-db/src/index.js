@@ -78,6 +78,16 @@ function publishSse(type, payload) {
   }
 }
 
+async function postJson(url, body = {}) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, payload };
+}
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "backend-core", bufferSize: events.length, sseClients: clients.size });
 });
@@ -138,14 +148,32 @@ app.post("/sensor/comm", async (req, res) => {
   const url = enabled ? SENSOR_COMM_ON_URL : SENSOR_COMM_OFF_URL;
 
   try {
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-    const body = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      return res.status(r.status).json({ ok: false, errorCode: 4002, error: body?.error || "sensor-comm-toggle-failed", targetUrl: url });
+    const primary = await postJson(url, {});
+    if (primary.ok) {
+      return res.json({ ok: true, commEnabled: primary.payload?.commEnabled ?? enabled, state: primary.payload?.state || null });
     }
-    return res.json({ ok: true, commEnabled: body?.commEnabled ?? enabled, state: body?.state || null });
+
+    // fallback: legacy/locked routing where only /control is reachable
+    const fallbackAction = enabled ? "comm_on" : "comm_off";
+    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target: "mock-1" });
+    if (fallback.ok) {
+      return res.json({
+        ok: true,
+        commEnabled: fallback.payload?.commEnabled ?? enabled,
+        state: fallback.payload?.state || null,
+        fallback: true,
+      });
+    }
+
+    return res.status(primary.status || fallback.status || 502).json({
+      ok: false,
+      errorCode: 4002,
+      error: primary.payload?.error || fallback.payload?.error || "sensor-comm-toggle-failed",
+      targetUrl: url,
+      fallbackUrl: SENSOR_CONTROL_URL,
+    });
   } catch (err) {
-    return res.status(502).json({ ok: false, errorCode: 4002, error: err?.message || "sensor-comm-unreachable", targetUrl: url });
+    return res.status(502).json({ ok: false, errorCode: 4002, error: err?.message || "sensor-comm-unreachable", targetUrl: url, fallbackUrl: SENSOR_CONTROL_URL });
   }
 });
 
@@ -154,14 +182,32 @@ app.post("/sensor/loop", async (req, res) => {
   const url = running ? SENSOR_LOOP_START_URL : SENSOR_LOOP_STOP_URL;
 
   try {
-    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
-    const body = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      return res.status(r.status).json({ ok: false, errorCode: 4003, error: body?.error || "sensor-loop-toggle-failed", targetUrl: url });
+    const primary = await postJson(url, {});
+    if (primary.ok) {
+      return res.json({ ok: true, loopRunning: primary.payload?.loopRunning ?? running, state: primary.payload?.state || null });
     }
-    return res.json({ ok: true, loopRunning: body?.loopRunning ?? running, state: body?.state || null });
+
+    // fallback: legacy/locked routing where only /control is reachable
+    const fallbackAction = running ? "loop_start" : "loop_stop";
+    const fallback = await postJson(SENSOR_CONTROL_URL, { action: fallbackAction, target: "mock-1" });
+    if (fallback.ok) {
+      return res.json({
+        ok: true,
+        loopRunning: fallback.payload?.loopRunning ?? running,
+        state: fallback.payload?.state || null,
+        fallback: true,
+      });
+    }
+
+    return res.status(primary.status || fallback.status || 502).json({
+      ok: false,
+      errorCode: 4003,
+      error: primary.payload?.error || fallback.payload?.error || "sensor-loop-toggle-failed",
+      targetUrl: url,
+      fallbackUrl: SENSOR_CONTROL_URL,
+    });
   } catch (err) {
-    return res.status(502).json({ ok: false, errorCode: 4003, error: err?.message || "sensor-loop-unreachable", targetUrl: url });
+    return res.status(502).json({ ok: false, errorCode: 4003, error: err?.message || "sensor-loop-unreachable", targetUrl: url, fallbackUrl: SENSOR_CONTROL_URL });
   }
 });
 

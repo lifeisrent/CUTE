@@ -147,18 +147,35 @@ app.post("/loop/stop", express.json({ limit: "64kb" }), (_req, res) => {
 
 app.post("/control", express.json({ limit: "64kb" }), (req, res) => {
   const action = String(req.body?.action || "noop").toLowerCase();
-  if (typeof adapter.setAction === "function") {
+  let applied = true;
+
+  if (action === "comm_on") {
+    runtime.commEnabled = true;
+    if (runtime.loopRunning) runtime.state = "CONNECTED";
+  } else if (action === "comm_off") {
+    runtime.commEnabled = false;
+    if (runtime.loopRunning) runtime.state = "PAUSED";
+  } else if (action === "loop_start") {
+    startLoop();
+  } else if (action === "loop_stop") {
+    stopLoop();
+  } else if (typeof adapter.setAction === "function") {
     adapter.setAction(action);
+  } else {
+    applied = false;
   }
 
   const controlState = typeof adapter.getControlState === "function" ? adapter.getControlState() : null;
 
   res.json({
     ok: true,
-    applied: true,
+    applied,
     action,
     sensorId: SENSOR_ID,
     controlState,
+    commEnabled: runtime.commEnabled,
+    loopRunning: runtime.loopRunning,
+    state: runtime.state,
   });
 });
 
