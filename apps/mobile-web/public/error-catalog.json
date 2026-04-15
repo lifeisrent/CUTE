@@ -1,34 +1,30 @@
 {
-  "CUTE-WEB-NET-001": {
+  "1000": {
     "severity": "error",
     "layer": "WEB",
-    "domain": "NET",
-    "title": "API endpoint unreachable",
-    "userMessage": "백엔드 연결 실패: API_BASE_URL 또는 백엔드 상태를 확인하세요.",
-    "devHint": "API_BASE_URL/public URL 확인, backend /health 점검"
+    "title": "IP 오류",
+    "userMessage": "백엔드 주소가 올바른지 확인하세요.",
+    "devHint": "API_BASE_URL 호스트/프로토콜 확인"
   },
-  "CUTE-WEB-CORS-001": {
+  "1001": {
     "severity": "error",
     "layer": "WEB",
-    "domain": "CORS",
-    "title": "Possible CORS block",
-    "userMessage": "연결 실패: backend CORS_ORIGINS에 현재 web 도메인이 포함되어 있는지 확인하세요.",
-    "devHint": "backend CORS_ORIGINS=<web-domain>"
+    "title": "CORS 오류",
+    "userMessage": "백엔드에 도메인을 추가하세요.",
+    "devHint": "backend CORS_ORIGINS에 현재 web 도메인 추가"
   },
-  "CUTE-WEB-STREAM-001": {
+  "1002": {
     "severity": "error",
     "layer": "WEB",
-    "domain": "STREAM",
-    "title": "SSE stream failed",
-    "userMessage": "실시간 스트림 연결 실패: 잠시 후 재시도하거나 설정을 확인하세요.",
-    "devHint": "GET /stream 응답 및 EventSource 오류 확인"
+    "title": "SSE 연결 실패",
+    "userMessage": "실시간 스트림 연결에 실패했습니다. 설정을 확인하세요.",
+    "devHint": "GET /stream 응답 및 CORS/SSE 헤더 확인"
   },
-  "CUTE-WEB-CONTROL-001": {
+  "3001": {
     "severity": "error",
     "layer": "WEB",
-    "domain": "CONTROL",
-    "title": "Control request failed",
-    "userMessage": "제어 요청 실패: backend 설정(CORS/SENSOR_CONTROL_URL)을 확인하세요.",
-    "devHint": "POST /control status code 및 backend 로그 확인"
+    "title": "프론트 제어 요청 실패",
+    "userMessage": "제어 요청에 실패했습니다. 잠시 후 다시 시도하세요.",
+    "devHint": "POST /control status code, CORS, API_BASE_URL 점검"
   }
 }
