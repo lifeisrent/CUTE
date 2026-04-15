@@ -13,12 +13,16 @@
         gap:10px;
       }
       .menu-btn {
-        width:72px; height:56px; border-radius:14px; border:none;
-        background:transparent; color:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;
-        gap:4px; font-size:22px;
+        width:76px; height:58px; border-radius:14px; border:none;
+        background:transparent; color:rgba(255,255,255,.72); display:flex; flex-direction:column; align-items:center; justify-content:center;
+        gap:5px; font-size:21px;
+      }
+      .menu-btn .icon {
+        width:22px; height:22px; display:grid; place-items:center;
+        font-size:18px; font-weight:700; line-height:1;
       }
       .menu-btn .label { font-size:11px; color:rgba(255,255,255,.7); font-weight:700; }
-      .menu-btn.on { background:#3a3270; }
+      .menu-btn.on { background:rgba(255,255,255,.09); color:#fff; }
       .menu-btn.on .label { color:#fff; }
       .main { flex:1; padding:18px; }
       .row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
@@ -65,8 +69,8 @@
   <body>
     <div class="app">
       <aside class="sidebar">
-        <button id="menu-dashboard" class="menu-btn on" title="메인 대시보드"><span>🏠</span><span class="label">홈</span></button>
-        <button id="menu-log" class="menu-btn" title="로그"><span>📄</span><span class="label">로그</span></button>
+        <button id="menu-dashboard" class="menu-btn on" title="메인 대시보드"><span class="icon">⌂</span><span class="label">홈</span></button>
+        <button id="menu-log" class="menu-btn" title="로그"><span class="icon">≡</span><span class="label">로그</span></button>
       </aside>
 
       <main class="main">
