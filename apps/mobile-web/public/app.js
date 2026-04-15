@@ -4,7 +4,8 @@ const state = {
   events: [],
   lastAck: null,
   errors: {},
-  sensorState: "INIT"
+  sensorState: "INIT",
+  lastSensorUpdateAt: 0
 };
 
 const cards = document.getElementById("cards");
@@ -68,6 +69,11 @@ function renderSensorState() {
   const v = String(state.sensorState || "INIT").toUpperCase();
   if (!sensorStateBadgeEl) return;
   sensorStateBadgeEl.textContent = v;
+
+  // reset inline style first (important when state changes from INIT/STOPPED)
+  sensorStateBadgeEl.style.background = "";
+  sensorStateBadgeEl.style.color = "";
+
   if (v === "CONNECTED") {
     sensorStateBadgeEl.className = "badge ok";
   } else if (v === "DISCONNECTED") {
@@ -117,7 +123,12 @@ async function fetchSensorStatus() {
     const data = await r.json();
     state.sensorState = data.state || "INIT";
   } catch {
-    state.sensorState = "DISCONNECTED";
+    // avoid false red while sensor updates are actively flowing
+    const now = Date.now();
+    const recentlyUpdated = now - state.lastSensorUpdateAt < 10000;
+    if (!recentlyUpdated) {
+      state.sensorState = "DISCONNECTED";
+    }
   }
   renderSensorState();
   renderCards();
@@ -157,6 +168,14 @@ function connectSse() {
     const e = JSON.parse(ev.data);
     state.latest[`${e.sensorId}:${e.type}`] = e;
     state.events.unshift(e);
+
+    // real-time state reflection: incoming sensor data means connected
+    state.lastSensorUpdateAt = Date.now();
+    if (state.sensorState !== "PAUSED") {
+      state.sensorState = "CONNECTED";
+    }
+
+    renderSensorState();
     renderCards();
     renderEvents();
   });
@@ -272,4 +291,15 @@ function setView(view) {
   connectSse();
 
   setInterval(fetchSensorStatus, 3000);
+
+  // stale watchdog: if stream is quiet for too long, mark disconnected
+  setInterval(() => {
+    const now = Date.now();
+    const isStale = state.lastSensorUpdateAt > 0 && now - state.lastSensorUpdateAt > 12000;
+    if (isStale && state.sensorState !== "PAUSED") {
+      state.sensorState = "DISCONNECTED";
+      renderSensorState();
+      renderCards();
+    }
+  }, 3000);
 })();
