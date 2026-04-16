@@ -5,6 +5,8 @@ const state = {
   lastAck: null,
   errors: {},
   sensorState: "INIT",
+  collectorState: "UNKNOWN",
+  collectorMeta: null,
   lastSensorUpdateAt: 0
 };
 
@@ -14,6 +16,9 @@ const connEl = document.getElementById("conn");
 const ackEl = document.getElementById("ack");
 const netmsgEl = document.getElementById("netmsg");
 const sensorStateBadgeEl = document.getElementById("sensor-state-badge");
+const collectorStateBadgeEl = document.getElementById("collector-state-badge");
+const collectorMetaEl = document.getElementById("collector-meta");
+const collectorRefreshBtn = document.getElementById("collector-refresh");
 
 const menuDashboard = document.getElementById("menu-dashboard");
 const menuLog = document.getElementById("menu-log");
@@ -125,30 +130,47 @@ function renderArchiveUnits() {
   }).join("");
 }
 
-function renderSensorState() {
-  const v = String(state.sensorState || "INIT").toUpperCase();
-  if (!sensorStateBadgeEl) return;
-  sensorStateBadgeEl.textContent = v;
+function applyStateBadgeStyle(el, rawState) {
+  if (!el) return;
+  const v = String(rawState || "UNKNOWN").toUpperCase();
+  el.textContent = v;
+  el.style.background = "";
+  el.style.color = "";
 
-  // reset inline style first (important when state changes from INIT/STOPPED)
-  sensorStateBadgeEl.style.background = "";
-  sensorStateBadgeEl.style.color = "";
-
-  if (v === "CONNECTED") {
-    sensorStateBadgeEl.className = "badge ok";
+  if (v === "CONNECTED" || v === "HEALTHY") {
+    el.className = "badge ok";
   } else if (v === "DISCONNECTED") {
-    sensorStateBadgeEl.className = "badge bad";
-  } else if (v === "PAUSED") {
-    sensorStateBadgeEl.className = "badge warn";
+    el.className = "badge bad";
+  } else if (v === "PAUSED" || v === "STALE" || v === "RECOVERING") {
+    el.className = "badge warn";
   } else if (v === "INIT") {
-    sensorStateBadgeEl.className = "badge";
-    sensorStateBadgeEl.style.background = "rgba(120,140,255,.18)";
-    sensorStateBadgeEl.style.color = "#9ab0ff";
+    el.className = "badge";
+    el.style.background = "rgba(120,140,255,.18)";
+    el.style.color = "#9ab0ff";
   } else {
-    sensorStateBadgeEl.className = "badge";
-    sensorStateBadgeEl.style.background = "rgba(190,190,190,.18)";
-    sensorStateBadgeEl.style.color = "#cfcfcf";
+    el.className = "badge";
+    el.style.background = "rgba(190,190,190,.18)";
+    el.style.color = "#cfcfcf";
   }
+}
+
+function renderSensorState() {
+  applyStateBadgeStyle(sensorStateBadgeEl, state.sensorState || "INIT");
+}
+
+function renderCollectorState() {
+  applyStateBadgeStyle(collectorStateBadgeEl, state.collectorState || "UNKNOWN");
+  if (!collectorMetaEl) return;
+
+  const m = state.collectorMeta || {};
+  const lines = [
+    `lastCollectAt: ${m.lastCollectAt || "-"}`,
+    `lastCollectDeltaMs: ${Number.isFinite(m.lastCollectDeltaMs) ? m.lastCollectDeltaMs : "-"}`,
+    `lastRecoveryAt: ${m.lastRecoveryAt || "-"}`,
+    `updatedAt: ${m.updatedAt || "-"}`,
+    `staleMs: ${Number.isFinite(m.staleMs) ? m.staleMs : "-"}`,
+  ];
+  collectorMetaEl.textContent = lines.join("\n");
 }
 
 function renderAck() {
@@ -207,11 +229,32 @@ async function fetchSensorStatus() {
   renderCards();
 }
 
+async function fetchCollectorStatus() {
+  try {
+    const r = await fetch(`${state.apiBase}/collector/status`);
+    if (!r.ok) throw new Error(`collector-status ${r.status}`);
+    const data = await r.json();
+    state.collectorState = data.collectorState || "UNKNOWN";
+    state.collectorMeta = data;
+  } catch {
+    state.collectorState = "DISCONNECTED";
+    state.collectorMeta = {
+      lastCollectAt: null,
+      lastCollectDeltaMs: null,
+      lastRecoveryAt: null,
+      updatedAt: new Date().toISOString(),
+      staleMs: null,
+    };
+  }
+  renderCollectorState();
+}
+
 async function loadInitial() {
   try {
     const [eventsResp] = await Promise.all([
       fetch(`${state.apiBase}/events?limit=50`),
-      fetchSensorStatus()
+      fetchSensorStatus(),
+      fetchCollectorStatus()
     ]);
 
     if (!eventsResp.ok) throw new Error(`events ${eventsResp.status}`);
@@ -251,6 +294,16 @@ function connectSse() {
     renderSensorState();
     renderCards();
     renderEvents();
+  });
+
+  es.addEventListener("collector.state", (ev) => {
+    const data = JSON.parse(ev.data || "{}");
+    state.collectorState = data.state || state.collectorState || "UNKNOWN";
+    state.collectorMeta = {
+      ...(state.collectorMeta || {}),
+      ...data,
+    };
+    renderCollectorState();
   });
 
   es.addEventListener("command.ack", (ev) => {
@@ -442,6 +495,7 @@ function setView(view) {
   state.errors = catalog || {};
 
   document.getElementById("refresh").addEventListener("click", loadInitial);
+  collectorRefreshBtn?.addEventListener("click", fetchCollectorStatus);
   document.querySelectorAll(".control-btn").forEach((btn) => {
     btn.addEventListener("click", () => sendControl(btn.dataset.action));
   });
@@ -476,12 +530,14 @@ function setView(view) {
   await loadInitial();
   renderAck();
   renderSensorState();
+  renderCollectorState();
   renderArchiveUnits();
   setView("dashboard");
   applyLang("ko");
   connectSse();
 
   setInterval(fetchSensorStatus, 3000);
+  setInterval(fetchCollectorStatus, 3000);
 
   // stale watchdog: if stream is quiet for too long, mark disconnected
   setInterval(() => {

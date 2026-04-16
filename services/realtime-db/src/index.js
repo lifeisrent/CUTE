@@ -51,6 +51,45 @@ const SENSOR_COMM_ON_URL = process.env.SENSOR_COMM_ON_URL || `${SENSOR_BASE_URL}
 const SENSOR_COMM_OFF_URL = process.env.SENSOR_COMM_OFF_URL || `${SENSOR_BASE_URL}/comm/off`;
 const SENSOR_LOOP_START_URL = process.env.SENSOR_LOOP_START_URL || `${SENSOR_BASE_URL}/loop/start`;
 const SENSOR_LOOP_STOP_URL = process.env.SENSOR_LOOP_STOP_URL || `${SENSOR_BASE_URL}/loop/stop`;
+const COLLECTOR_STALE_MS = Number(process.env.COLLECTOR_STALE_MS || 10000);
+
+const collectorMonitor = {
+  state: "UNKNOWN",
+  lastCollectAt: null,
+  lastProbeAt: null,
+  lastProbeOk: null,
+  consecutiveProbeFailures: 0,
+  lastRecoveryAt: null,
+  updatedAt: new Date().toISOString(),
+};
+
+function setCollectorState(nextState, reason = "") {
+  const prev = collectorMonitor.state;
+  collectorMonitor.state = nextState;
+  collectorMonitor.updatedAt = new Date().toISOString();
+  if ((prev === "DISCONNECTED" || prev === "STALE") && nextState === "HEALTHY") {
+    collectorMonitor.lastRecoveryAt = collectorMonitor.updatedAt;
+  }
+  publishSse("collector.state", {
+    state: collectorMonitor.state,
+    prevState: prev,
+    reason,
+    updatedAt: collectorMonitor.updatedAt,
+    lastCollectAt: collectorMonitor.lastCollectAt,
+    lastProbeAt: collectorMonitor.lastProbeAt,
+    lastProbeOk: collectorMonitor.lastProbeOk,
+    consecutiveProbeFailures: collectorMonitor.consecutiveProbeFailures,
+    lastRecoveryAt: collectorMonitor.lastRecoveryAt,
+  });
+}
+
+function refreshCollectorStateByTime() {
+  if (!collectorMonitor.lastCollectAt) return;
+  const delta = Date.now() - Date.parse(collectorMonitor.lastCollectAt);
+  if (delta > COLLECTOR_STALE_MS && collectorMonitor.state !== "DISCONNECTED") {
+    setCollectorState("STALE", `no-collect>${COLLECTOR_STALE_MS}ms`);
+  }
+}
 
 app.use(express.json({ limit: "256kb" }));
 app.use(cors({ origin: CORS_ORIGINS.includes("*") ? true : CORS_ORIGINS }));
@@ -130,6 +169,13 @@ app.post("/collect", (req, res) => {
 
   const event = normalizeEvent(req.body, "B");
 
+  // collector liveness signal
+  collectorMonitor.lastCollectAt = event.timestamp || new Date().toISOString();
+  collectorMonitor.updatedAt = new Date().toISOString();
+  if (["UNKNOWN", "STALE", "DISCONNECTED"].includes(collectorMonitor.state)) {
+    setCollectorState("HEALTHY", "collect-received");
+  }
+
   // C+D: ingest + realtime db
   appendEvent(event);
   publishSse("sensor.update", event);
@@ -181,6 +227,27 @@ app.get("/sensor/status", async (_req, res) => {
   } catch (err) {
     return res.status(502).json({ ok: false, errorCode: 4001, error: err?.message || "sensor-status-unreachable" });
   }
+});
+
+app.get("/collector/status", (_req, res) => {
+  refreshCollectorStateByTime();
+  const now = Date.now();
+  const lastCollectDeltaMs = collectorMonitor.lastCollectAt
+    ? now - Date.parse(collectorMonitor.lastCollectAt)
+    : null;
+
+  return res.json({
+    ok: true,
+    collectorState: collectorMonitor.state,
+    lastCollectAt: collectorMonitor.lastCollectAt,
+    lastCollectDeltaMs,
+    lastProbeAt: collectorMonitor.lastProbeAt,
+    lastProbeOk: collectorMonitor.lastProbeOk,
+    consecutiveProbeFailures: collectorMonitor.consecutiveProbeFailures,
+    lastRecoveryAt: collectorMonitor.lastRecoveryAt,
+    staleMs: COLLECTOR_STALE_MS,
+    updatedAt: collectorMonitor.updatedAt,
+  });
 });
 
 app.post("/sensor/comm", async (req, res) => {
