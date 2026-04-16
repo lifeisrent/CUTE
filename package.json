@@ -10,6 +10,7 @@
     "dev:core": "npm run dev --workspace services/realtime-db",
     "dev:sensor": "npm run dev --workspace services/mock-sensor",
     "dev:web": "npm run dev --workspace apps/mobile-web",
+    "dev:web-react": "npm run dev --workspace @cute/mobile-web-react",
     "start:core": "npm run start --workspace services/realtime-db",
     "start:sensor": "npm run start --workspace services/mock-sensor",
     "start:web": "npm run start --workspace apps/mobile-web"
