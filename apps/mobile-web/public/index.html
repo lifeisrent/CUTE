@@ -44,7 +44,12 @@
         margin:-18px -18px 12px;
         min-height:52px;
       }
-      .lang-wrap { position:relative; }
+      .lang-wrap {
+        position:relative;
+        display:flex;
+        align-items:center;
+        gap:6px;
+      }
       .lang-btn {
         border:none;
         border-radius:8px;
@@ -53,9 +58,6 @@
         font-weight:700;
         background:rgba(255,255,255,.12);
         color:#fff;
-        display:inline-flex;
-        align-items:center;
-        gap:6px;
       }
       .lang-icon {
         width:14px;
@@ -63,7 +65,7 @@
         display:inline-flex;
         align-items:center;
         justify-content:center;
-        opacity:.95;
+        color:rgba(255,255,255,.38);
       }
       .lang-icon svg {
         width:14px;
@@ -194,19 +196,17 @@
             <div id="subtitle" class="muted">Monitoring + Control (MVP)</div>
           </div>
           <div class="lang-wrap">
-            <button id="lang-current" class="lang-btn">
-              <span class="lang-icon" aria-hidden="true">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-languages">
-                  <path d="m5 8 6 6"/>
-                  <path d="m4 14 6-6 2-3"/>
-                  <path d="M2 5h12"/>
-                  <path d="M7 2h1"/>
-                  <path d="m22 22-5-10-5 10"/>
-                  <path d="M14 18h6"/>
-                </svg>
-              </span>
-              <span>한국어 ▾</span>
-            </button>
+            <span class="lang-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-languages">
+                <path d="m5 8 6 6"/>
+                <path d="m4 14 6-6 2-3"/>
+                <path d="M2 5h12"/>
+                <path d="M7 2h1"/>
+                <path d="m22 22-5-10-5 10"/>
+                <path d="M14 18h6"/>
+              </svg>
+            </span>
+            <button id="lang-current" class="lang-btn"><span>한국어 ▾</span></button>
             <div id="lang-menu" class="lang-menu">
               <button class="lang-option" data-lang="ko">한국어</button>
               <button class="lang-option" data-lang="en">English</button>
