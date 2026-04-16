@@ -3,8 +3,10 @@
 가짜 센서 데이터(또는 raw frame) 생성기.
 
 ## 역할
-- `SENSOR_OUTPUT_MODE=collector`: 기존처럼 collector(`/collect`)에 정규화 이벤트 전송
+- `SENSOR_OUTPUT_MODE=collector`: (호환 모드) collector(`/collect`)에 정규화 이벤트 전송
 - `SENSOR_OUTPUT_MODE=raw`: Modbus RTU raw frame 생성 (`GET /raw/frame`)
+
+기본은 `ENFORCE_DRIVER_PIPELINE=true`로, collector 직송을 차단하고 `raw -> modbus-driver -> /collect` 경로만 허용합니다.
 
 ## 실행
 ```bash

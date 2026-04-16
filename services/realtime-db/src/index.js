@@ -52,6 +52,7 @@ const SENSOR_COMM_OFF_URL = process.env.SENSOR_COMM_OFF_URL || `${SENSOR_BASE_UR
 const SENSOR_LOOP_START_URL = process.env.SENSOR_LOOP_START_URL || `${SENSOR_BASE_URL}/loop/start`;
 const SENSOR_LOOP_STOP_URL = process.env.SENSOR_LOOP_STOP_URL || `${SENSOR_BASE_URL}/loop/stop`;
 const MODBUS_DRIVER_STATUS_URL = process.env.MODBUS_DRIVER_STATUS_URL || "";
+const ENFORCE_DRIVER_PIPELINE = String(process.env.ENFORCE_DRIVER_PIPELINE || "true").toLowerCase() !== "false";
 const COLLECTOR_STALE_MS = Number(process.env.COLLECTOR_STALE_MS || 10000);
 
 const collectorMonitor = {
@@ -173,6 +174,15 @@ app.get("/health", (_req, res) => {
 app.post("/collect", (req, res) => {
   const err = validateEvent(req.body);
   if (err) return res.status(400).json({ error: err });
+
+  if (ENFORCE_DRIVER_PIPELINE && String(req.body?.source || "").toLowerCase() === "a") {
+    return res.status(403).json({
+      ok: false,
+      errorCode: 4105,
+      error: "direct-collector-from-mock-sensor-disabled",
+      guide: "use modbus-driver pipeline (raw/frame -> parse -> /collect)",
+    });
+  }
 
   const event = normalizeEvent(req.body, "B");
 

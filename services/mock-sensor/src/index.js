@@ -10,6 +10,7 @@ const SENSOR_ID = process.env.SENSOR_ID || "mock-1";
 const SENSOR_INTERVAL_MS = Number(process.env.SENSOR_INTERVAL_MS || 1000);
 const ADAPTER_KIND = (process.env.SENSOR_ADAPTER || "mock").toLowerCase();
 const OUTPUT_MODE = (process.env.SENSOR_OUTPUT_MODE || "collector").toLowerCase(); // collector | raw
+const ENFORCE_DRIVER_PIPELINE = String(process.env.ENFORCE_DRIVER_PIPELINE || "true").toLowerCase() !== "false";
 
 const adapterRegistry = {
   mock: new MockAdapter(),
@@ -128,6 +129,10 @@ async function tickOnce() {
     runtime.lastRawFrameHex = frame.rawHex;
     runtime.lastSendAt = frame.createdAt;
     return;
+  }
+
+  if (ENFORCE_DRIVER_PIPELINE) {
+    throw new Error("direct-collector-disabled: set SENSOR_OUTPUT_MODE=raw and use modbus-driver");
   }
 
   const raws = await adapter.read();
@@ -280,9 +285,14 @@ app.post("/emit-once", async (_req, res) => {
 });
 
 app.listen(PORT, async () => {
+  if (ENFORCE_DRIVER_PIPELINE && OUTPUT_MODE !== "raw") {
+    console.error("[mock-sensor] blocked: direct collector pipeline is disabled. Set SENSOR_OUTPUT_MODE=raw.");
+    process.exit(1);
+  }
+
   await adapter.start({ sensorId: SENSOR_ID });
   runtime.state = "INIT";
-  console.log(`[mock-sensor] listening on :${PORT} (adapter=${adapter.kind}, output=${OUTPUT_MODE})`);
+  console.log(`[mock-sensor] listening on :${PORT} (adapter=${adapter.kind}, output=${OUTPUT_MODE}, enforceDriver=${ENFORCE_DRIVER_PIPELINE})`);
   startLoop();
 });
 

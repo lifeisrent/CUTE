@@ -54,3 +54,5 @@
 53,보관함,서비스 토폴로지,"보관함 페이지에서 유닛 목록 대신 서비스명/API/연결관계/현재상태를 표시"
 54,서비스 상태 API,백엔드,"backend-core에 /services/status 추가(mock-sensor/modbus-driver 상태 취합)"
 55,보관함,드라이버 표시,"MODBUS_DRIVER_STATUS_URL 미설정이어도 보관함 서비스 목록에 modbus-driver 항목이 항상 표시되도록 개선"
+56,파이프라인 강제,수집 정책,"mock-sensor->collector 직송 차단(ENFORCE_DRIVER_PIPELINE) 및 raw->modbus-driver->collect 경로 강제"
+57,수집 차단,백엔드,"backend-core /collect에서 source=A 직송을 403(errorCode 4105)로 거부"
