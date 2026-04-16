@@ -320,35 +320,35 @@ app.get("/services/status", async (_req, res) => {
     });
   }
 
-  if (MODBUS_DRIVER_STATUS_URL) {
-    try {
-      const driver = await getJson(MODBUS_DRIVER_STATUS_URL);
-      services.push({
-        name: "modbus-driver",
-        role: "modbus rtu parser",
-        status: driver.ok ? (driver.payload?.state || "HEALTHY") : "DISCONNECTED",
-        apis: ["GET /health", "GET /status", "POST /driver/start|stop", "POST /emit-once"],
-        relations: [
-          "modbus-driver -> mock-sensor (/raw/frame)",
-          "modbus-driver -> backend-core (/collect)",
-        ],
-        detail: {
-          url: MODBUS_DRIVER_STATUS_URL,
-          statusCode: driver.status,
-          state: driver.payload?.state || null,
-          lastParsedAt: driver.payload?.lastParsedAt || null,
-        },
-      });
-    } catch (err) {
-      services.push({
-        name: "modbus-driver",
-        role: "modbus rtu parser",
-        status: "DISCONNECTED",
-        apis: ["GET /status"],
-        relations: ["modbus-driver -> mock-sensor (/raw/frame)", "modbus-driver -> backend-core (/collect)"],
-        detail: { url: MODBUS_DRIVER_STATUS_URL, error: err?.message || "driver-status-unreachable" },
-      });
-    }
+  const driverStatusUrl = MODBUS_DRIVER_STATUS_URL || `${SENSOR_BASE_URL.replace(/\/$/, "")}:3110/status`;
+
+  try {
+    const driver = await getJson(driverStatusUrl);
+    services.push({
+      name: "modbus-driver",
+      role: "modbus rtu parser",
+      status: driver.ok ? (driver.payload?.state || "HEALTHY") : "DISCONNECTED",
+      apis: ["GET /health", "GET /status", "POST /driver/start|stop", "POST /emit-once"],
+      relations: [
+        "modbus-driver -> mock-sensor (/raw/frame)",
+        "modbus-driver -> backend-core (/collect)",
+      ],
+      detail: {
+        url: driverStatusUrl,
+        statusCode: driver.status,
+        state: driver.payload?.state || null,
+        lastParsedAt: driver.payload?.lastParsedAt || null,
+      },
+    });
+  } catch (err) {
+    services.push({
+      name: "modbus-driver",
+      role: "modbus rtu parser",
+      status: "DISCONNECTED",
+      apis: ["GET /status"],
+      relations: ["modbus-driver -> mock-sensor (/raw/frame)", "modbus-driver -> backend-core (/collect)"],
+      detail: { url: driverStatusUrl, error: err?.message || "driver-status-unreachable" },
+    });
   }
 
   return res.json({ ok: true, services });
