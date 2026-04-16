@@ -316,9 +316,16 @@ function applyLang(lang) {
   subtitleEl.textContent = dict.subtitle;
   const homeLabel = menuDashboard.querySelector(".label");
   const logLabel = menuLog.querySelector(".label");
+  const labelEl = langCurrent?.querySelector("span:last-child");
   if (homeLabel) homeLabel.textContent = dict.menuHome;
   if (logLabel) logLabel.textContent = dict.menuLog;
-  langCurrent.textContent = `${dict.langLabel} ▾`;
+
+  if (labelEl) {
+    labelEl.textContent = `${dict.langLabel} ▾`;
+  } else {
+    langCurrent.textContent = `${dict.langLabel} ▾`;
+  }
+
   langMenu.classList.remove("on");
 }
 

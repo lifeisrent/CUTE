@@ -34,3 +34,4 @@
 33,제어 추적,백엔드,"sensor comm/loop 제어 응답에 controlTraceId 및 hopResults 포함"
 34,제어 추적,백엔드,"control attempt ring buffer 및 조회 API(/control/attempts) 추가"
 35,디버그 UI,웹앱,"debugControl=1 모드에서 제어 요청/응답 payload 표시"
+36,상단바,아이콘,"언어 토글 버튼 왼쪽에 lucide-react languages 아이콘 추가"
