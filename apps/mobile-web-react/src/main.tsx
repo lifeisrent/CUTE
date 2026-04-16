@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import ChartAreaTemplate from "./ChartAreaTemplate";
 import type { DateRange, FetchHistoryFn, HistoryPoint, RealtimePoint, RealtimeProvider, SensorSeries } from "./types";
+import "./global.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -83,7 +84,7 @@ function App() {
   const selectedCount = useMemo(() => selected.size, [selected]);
 
   return (
-    <main style={{ padding: 16, fontFamily: "Arial, sans-serif", color: "#fff", background: "#0d0b1f", minHeight: "100vh" }}>
+    <main style={{ padding: 16, fontFamily: "Arial, sans-serif", color: "#fff", background: "#05060b", minHeight: "100vh" }}>
       <h1 style={{ marginTop: 0 }}>CUTE React uPlot Testbed</h1>
       <p style={{ color: "rgba(255,255,255,.72)" }}>
         API: {API_BASE_URL} · 선택 센서 {selectedCount}개
