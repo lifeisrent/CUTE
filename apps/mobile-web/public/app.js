@@ -17,13 +17,18 @@ const sensorStateBadgeEl = document.getElementById("sensor-state-badge");
 
 const menuDashboard = document.getElementById("menu-dashboard");
 const menuLog = document.getElementById("menu-log");
+const menuArchive = document.getElementById("menu-archive");
 const viewDashboard = document.getElementById("view-dashboard");
 const viewLog = document.getElementById("view-log");
+const viewArchive = document.getElementById("view-archive");
 const langCurrent = document.getElementById("lang-current");
 const langMenu = document.getElementById("lang-menu");
 const langOptions = document.querySelectorAll(".lang-option");
 const titleEl = document.getElementById("title");
 const subtitleEl = document.getElementById("subtitle");
+const unitListEl = document.getElementById("unit-list");
+const archiveCountEl = document.getElementById("archive-count");
+const archiveTitleEl = document.getElementById("archive-title");
 
 const sensorControlModal = document.getElementById("sensor-control-modal");
 const btnCommOn = document.getElementById("btn-comm-on");
@@ -63,6 +68,7 @@ function renderCards() {
     </div>
   `).join("");
 
+  renderArchiveUnits();
   attachSensorCardLongPress();
 }
 
@@ -73,6 +79,31 @@ function renderEvents() {
       <div><b>${e.type}</b> · ${e.value}${e.unit || ""}</div>
       <div class="muted">${e.sensorId} · ${new Date(e.timestamp).toLocaleTimeString()}</div>
     </li>
+  `).join("");
+}
+
+function renderArchiveUnits() {
+  if (!unitListEl) return;
+
+  const entries = Object.entries(state.latest).filter(([, e]) => e.type === "power");
+  if (!entries.length) {
+    unitListEl.innerHTML = `<div class="muted">표시할 유닛이 없습니다.</div>`;
+    if (archiveCountEl) archiveCountEl.textContent = "0개";
+    return;
+  }
+
+  if (archiveCountEl) archiveCountEl.textContent = `${entries.length}개`;
+  unitListEl.innerHTML = entries.map(([key, e], idx) => `
+    <div class="unit-item">
+      <div>
+        <div style="font-weight:800;">유닛 ${idx + 1}</div>
+        <div class="muted">${key}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:800;">${e.value}${e.unit || ""}</div>
+        <div class="muted">${new Date(e.timestamp).toLocaleTimeString()}</div>
+      </div>
+    </div>
   `).join("");
 }
 
@@ -299,6 +330,8 @@ const I18N = {
     subtitle: "Monitoring + Control (MVP)",
     menuHome: "홈",
     menuLog: "로그",
+    menuArchive: "보관함",
+    archiveTitle: "보관함",
     langLabel: "한국어",
   },
   en: {
@@ -306,6 +339,8 @@ const I18N = {
     subtitle: "Monitoring + Control (MVP)",
     menuHome: "Home",
     menuLog: "Logs",
+    menuArchive: "Archive",
+    archiveTitle: "Archive",
     langLabel: "English",
   }
 };
@@ -316,9 +351,12 @@ function applyLang(lang) {
   subtitleEl.textContent = dict.subtitle;
   const homeLabel = menuDashboard.querySelector(".label");
   const logLabel = menuLog.querySelector(".label");
+  const archiveLabel = menuArchive?.querySelector(".label");
   const labelEl = langCurrent?.querySelector("span:last-child");
   if (homeLabel) homeLabel.textContent = dict.menuHome;
   if (logLabel) logLabel.textContent = dict.menuLog;
+  if (archiveLabel) archiveLabel.textContent = dict.menuArchive;
+  if (archiveTitleEl) archiveTitleEl.textContent = dict.archiveTitle;
 
   if (labelEl) {
     labelEl.textContent = `${dict.langLabel} ▾`;
@@ -364,10 +402,16 @@ function attachSensorCardLongPress() {
 
 function setView(view) {
   const isDashboard = view === "dashboard";
+  const isLog = view === "log";
+  const isArchive = view === "archive";
+
   viewDashboard.classList.toggle("on", isDashboard);
-  viewLog.classList.toggle("on", !isDashboard);
+  viewLog.classList.toggle("on", isLog);
+  viewArchive.classList.toggle("on", isArchive);
+
   menuDashboard.classList.toggle("on", isDashboard);
-  menuLog.classList.toggle("on", !isDashboard);
+  menuLog.classList.toggle("on", isLog);
+  menuArchive?.classList.toggle("on", isArchive);
 }
 
 (async function boot() {
@@ -395,6 +439,7 @@ function setView(view) {
 
   menuDashboard.addEventListener("click", () => setView("dashboard"));
   menuLog.addEventListener("click", () => setView("log"));
+  menuArchive?.addEventListener("click", () => setView("archive"));
 
   langCurrent.addEventListener("click", () => {
     langMenu.classList.toggle("on");
@@ -413,6 +458,7 @@ function setView(view) {
   await loadInitial();
   renderAck();
   renderSensorState();
+  renderArchiveUnits();
   setView("dashboard");
   applyLang("ko");
   connectSse();
