@@ -2,6 +2,7 @@ const state = {
   apiBase: "",
   latest: {},
   events: [],
+  services: [],
   lastAck: null,
   errors: {},
   sensorState: "INIT",
@@ -87,43 +88,37 @@ function renderEvents() {
   `).join("");
 }
 
-function thumbGradient(index) {
-  const palettes = [
-    "linear-gradient(135deg, #8a5cff, #ff4fc1)",
-    "linear-gradient(135deg, #f59e0b, #ef4444)",
-    "linear-gradient(135deg, #06b6d4, #3b82f6)",
-    "linear-gradient(135deg, #22c55e, #14b8a6)",
-    "linear-gradient(135deg, #e879f9, #8b5cf6)",
-  ];
-  return palettes[index % palettes.length];
-}
-
 function renderArchiveUnits() {
   if (!unitListEl) return;
 
-  const entries = Object.entries(state.latest).filter(([, e]) => e.type === "power");
-  if (!entries.length) {
-    unitListEl.innerHTML = `<div class="muted">표시할 유닛이 없습니다.</div>`;
+  const services = Array.isArray(state.services) ? state.services : [];
+  if (!services.length) {
+    unitListEl.innerHTML = `<div class="muted">서비스 정보를 불러오는 중입니다.</div>`;
     if (archiveCountEl) archiveCountEl.textContent = "0개";
     return;
   }
 
-  if (archiveCountEl) archiveCountEl.textContent = `${entries.length}개`;
-  unitListEl.innerHTML = entries.map(([key, e], idx) => {
-    const valueText = `${e.value}${e.unit || ""}`;
-    const meta = `유닛 · ${key} · ${new Date(e.timestamp).toLocaleTimeString()}`;
-    const title = `유닛 ${idx + 1}`;
+  if (archiveCountEl) archiveCountEl.textContent = `${services.length}개`;
+  unitListEl.innerHTML = services.map((svc) => {
+    const apis = Array.isArray(svc.apis) ? svc.apis.join(", ") : "-";
+    const relations = Array.isArray(svc.relations) ? svc.relations.join(" | ") : "-";
+    const statusClass = String(svc.status || "").toUpperCase();
+    const badgeClass = (statusClass === "HEALTHY" || statusClass === "CONNECTED")
+      ? "badge ok"
+      : (statusClass === "STALE" || statusClass === "RECOVERING" || statusClass === "PAUSED")
+        ? "badge warn"
+        : "badge bad";
+
     return `
-      <div class="unit-item">
-        <div class="unit-left">
-          <div class="unit-thumb" style="background:${thumbGradient(idx)}">${idx + 1}</div>
-          <div class="unit-text">
-            <div class="unit-title">${title}</div>
-            <div class="unit-subtitle">${meta} · ${valueText}</div>
+      <div class="unit-item" style="align-items:flex-start; border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:10px; margin-bottom:8px;">
+        <div style="width:100%;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px;">
+            <div class="unit-title" style="font-size:15px;">${svc.name}</div>
+            <span class="${badgeClass}">${svc.status || "UNKNOWN"}</span>
           </div>
-        </div>
-        <div class="unit-more" aria-label="more">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+          <div class="unit-subtitle" style="white-space:normal; margin-top:0;"><b>역할:</b> ${svc.role || "-"}</div>
+          <div class="unit-subtitle" style="white-space:normal;"><b>API:</b> ${apis}</div>
+          <div class="unit-subtitle" style="white-space:normal;"><b>연결:</b> ${relations}</div>
         </div>
       </div>
     `;
@@ -249,12 +244,25 @@ async function fetchCollectorStatus() {
   renderCollectorState();
 }
 
+async function fetchServicesStatus() {
+  try {
+    const r = await fetch(`${state.apiBase}/services/status`);
+    if (!r.ok) throw new Error(`services-status ${r.status}`);
+    const data = await r.json();
+    state.services = Array.isArray(data.services) ? data.services : [];
+  } catch {
+    state.services = [];
+  }
+  renderArchiveUnits();
+}
+
 async function loadInitial() {
   try {
     const [eventsResp] = await Promise.all([
       fetch(`${state.apiBase}/events?limit=50`),
       fetchSensorStatus(),
-      fetchCollectorStatus()
+      fetchCollectorStatus(),
+      fetchServicesStatus()
     ]);
 
     if (!eventsResp.ok) throw new Error(`events ${eventsResp.status}`);
@@ -538,6 +546,7 @@ function setView(view) {
 
   setInterval(fetchSensorStatus, 3000);
   setInterval(fetchCollectorStatus, 3000);
+  setInterval(fetchServicesStatus, 5000);
 
   // stale watchdog: if stream is quiet for too long, mark disconnected
   setInterval(() => {

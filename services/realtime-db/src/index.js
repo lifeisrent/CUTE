@@ -51,6 +51,7 @@ const SENSOR_COMM_ON_URL = process.env.SENSOR_COMM_ON_URL || `${SENSOR_BASE_URL}
 const SENSOR_COMM_OFF_URL = process.env.SENSOR_COMM_OFF_URL || `${SENSOR_BASE_URL}/comm/off`;
 const SENSOR_LOOP_START_URL = process.env.SENSOR_LOOP_START_URL || `${SENSOR_BASE_URL}/loop/start`;
 const SENSOR_LOOP_STOP_URL = process.env.SENSOR_LOOP_STOP_URL || `${SENSOR_BASE_URL}/loop/stop`;
+const MODBUS_DRIVER_STATUS_URL = process.env.MODBUS_DRIVER_STATUS_URL || "";
 const COLLECTOR_STALE_MS = Number(process.env.COLLECTOR_STALE_MS || 10000);
 
 const collectorMonitor = {
@@ -158,6 +159,12 @@ async function postJson(url, body = {}) {
   return { ok: r.ok, status: r.status, payload };
 }
 
+async function getJson(url) {
+  const r = await fetch(url);
+  const payload = await r.json().catch(() => ({}));
+  return { ok: r.ok, status: r.status, payload };
+}
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "backend-core", bufferSize: events.length, sseClients: clients.size });
 });
@@ -248,6 +255,103 @@ app.get("/collector/status", (_req, res) => {
     staleMs: COLLECTOR_STALE_MS,
     updatedAt: collectorMonitor.updatedAt,
   });
+});
+
+app.get("/services/status", async (_req, res) => {
+  refreshCollectorStateByTime();
+
+  const backendService = {
+    name: "backend-core",
+    role: "collector + ingest + realtime-db + stream-gateway",
+    status: "HEALTHY",
+    apis: [
+      "GET /health",
+      "POST /collect",
+      "POST /ingest",
+      "GET /events",
+      "GET /stream",
+      "GET /collector/status",
+      "GET /services/status",
+    ],
+    relations: [
+      "mock-sensor -> backend-core (/collect)",
+      "modbus-driver -> backend-core (/collect)",
+      "mobile-web -> backend-core (/events,/stream,/services/status)",
+    ],
+    detail: {
+      collectorState: collectorMonitor.state,
+      lastCollectAt: collectorMonitor.lastCollectAt,
+      staleMs: COLLECTOR_STALE_MS,
+    },
+  };
+
+  const services = [backendService];
+
+  try {
+    const sensor = await getJson(SENSOR_STATUS_URL);
+    services.push({
+      name: "mock-sensor",
+      role: "raw/event producer",
+      status: sensor.ok ? (sensor.payload?.state || "HEALTHY") : "DISCONNECTED",
+      apis: [
+        "GET /health",
+        "GET /status",
+        "GET /raw/frame",
+        "POST /comm/on|off",
+        "POST /loop/start|stop",
+        "POST /control",
+      ],
+      relations: ["backend-core -> mock-sensor (/sensor/status,/sensor/comm,/sensor/loop)", "modbus-driver -> mock-sensor (/raw/frame)"],
+      detail: {
+        url: SENSOR_STATUS_URL,
+        statusCode: sensor.status,
+        state: sensor.payload?.state || null,
+        outputMode: sensor.payload?.outputMode || null,
+      },
+    });
+  } catch (err) {
+    services.push({
+      name: "mock-sensor",
+      role: "raw/event producer",
+      status: "DISCONNECTED",
+      apis: ["GET /status", "GET /raw/frame"],
+      relations: ["modbus-driver -> mock-sensor (/raw/frame)"],
+      detail: { url: SENSOR_STATUS_URL, error: err?.message || "sensor-status-unreachable" },
+    });
+  }
+
+  if (MODBUS_DRIVER_STATUS_URL) {
+    try {
+      const driver = await getJson(MODBUS_DRIVER_STATUS_URL);
+      services.push({
+        name: "modbus-driver",
+        role: "modbus rtu parser",
+        status: driver.ok ? (driver.payload?.state || "HEALTHY") : "DISCONNECTED",
+        apis: ["GET /health", "GET /status", "POST /driver/start|stop", "POST /emit-once"],
+        relations: [
+          "modbus-driver -> mock-sensor (/raw/frame)",
+          "modbus-driver -> backend-core (/collect)",
+        ],
+        detail: {
+          url: MODBUS_DRIVER_STATUS_URL,
+          statusCode: driver.status,
+          state: driver.payload?.state || null,
+          lastParsedAt: driver.payload?.lastParsedAt || null,
+        },
+      });
+    } catch (err) {
+      services.push({
+        name: "modbus-driver",
+        role: "modbus rtu parser",
+        status: "DISCONNECTED",
+        apis: ["GET /status"],
+        relations: ["modbus-driver -> mock-sensor (/raw/frame)", "modbus-driver -> backend-core (/collect)"],
+        detail: { url: MODBUS_DRIVER_STATUS_URL, error: err?.message || "driver-status-unreachable" },
+      });
+    }
+  }
+
+  return res.json({ ok: true, services });
 });
 
 app.post("/sensor/comm", async (req, res) => {

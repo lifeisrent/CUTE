@@ -51,3 +51,5 @@
 50,아키텍처 분리,드라이버,"raw 데이터 파싱 책임을 mock-sensor에서 분리해 modbus-driver 프로세스로 이관"
 51,modbus rtu,파싱 구현,"modbus RTU CRC 검증 + 레지스터 파싱(temperature/humidity/power) 후 collector 전달"
 52,mock-sensor,raw 출력,"mock-sensor에 raw frame endpoint(/raw/frame)와 output mode(raw|collector) 추가"
+53,보관함,서비스 토폴로지,"보관함 페이지에서 유닛 목록 대신 서비스명/API/연결관계/현재상태를 표시"
+54,서비스 상태 API,백엔드,"backend-core에 /services/status 추가(mock-sensor/modbus-driver 상태 취합)"
