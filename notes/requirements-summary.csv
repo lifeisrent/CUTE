@@ -44,3 +44,5 @@
 43,배포,호스트허용,"mobile-web-react Railway 도메인 접근 차단 대응을 위해 Vite preview/server allowedHosts 설정 및 railway.json 추가"
 44,모바일 테마,안드로이드 표시,"안드로이드에서 가장자리 흰색 노출 방지를 위해 html/body/root 배경을 고정 다크색으로 통일"
 45,홈화면,테마 리스킨,"레퍼런스 캡처 기반으로 배경 그라데이션/상단 아이콘 배치/아이콘 크기/상단바 높이/제목 스타일 조정"
+46,연결 시나리오,MVP 계획,"기존 mobile-web 기준 backend-core↔mock-sensor 단절/복구 테스트 버튼/상태전이/API/SSE 설계 문서화"
+47,아키텍처,책임 분리,"sensor 드라이버/collector lifecycle/core monitor/ingest 책임 분리 방향 정의"
