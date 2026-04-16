@@ -82,6 +82,17 @@ function renderEvents() {
   `).join("");
 }
 
+function thumbGradient(index) {
+  const palettes = [
+    "linear-gradient(135deg, #8a5cff, #ff4fc1)",
+    "linear-gradient(135deg, #f59e0b, #ef4444)",
+    "linear-gradient(135deg, #06b6d4, #3b82f6)",
+    "linear-gradient(135deg, #22c55e, #14b8a6)",
+    "linear-gradient(135deg, #e879f9, #8b5cf6)",
+  ];
+  return palettes[index % palettes.length];
+}
+
 function renderArchiveUnits() {
   if (!unitListEl) return;
 
@@ -93,18 +104,25 @@ function renderArchiveUnits() {
   }
 
   if (archiveCountEl) archiveCountEl.textContent = `${entries.length}개`;
-  unitListEl.innerHTML = entries.map(([key, e], idx) => `
-    <div class="unit-item">
-      <div>
-        <div style="font-weight:800;">유닛 ${idx + 1}</div>
-        <div class="muted">${key}</div>
+  unitListEl.innerHTML = entries.map(([key, e], idx) => {
+    const valueText = `${e.value}${e.unit || ""}`;
+    const meta = `유닛 · ${key} · ${new Date(e.timestamp).toLocaleTimeString()}`;
+    const title = `유닛 ${idx + 1}`;
+    return `
+      <div class="unit-item">
+        <div class="unit-left">
+          <div class="unit-thumb" style="background:${thumbGradient(idx)}">${idx + 1}</div>
+          <div class="unit-text">
+            <div class="unit-title">${title}</div>
+            <div class="unit-subtitle">${meta} · ${valueText}</div>
+          </div>
+        </div>
+        <div class="unit-more" aria-label="more">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
+        </div>
       </div>
-      <div style="text-align:right;">
-        <div style="font-weight:800;">${e.value}${e.unit || ""}</div>
-        <div class="muted">${new Date(e.timestamp).toLocaleTimeString()}</div>
-      </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
 function renderSensorState() {

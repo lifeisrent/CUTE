@@ -121,16 +121,60 @@
       .control-btn { background:#2a2550; color:white; border:1px solid rgba(255,255,255,.15); }
       .view { display:none; }
       .view.on { display:block; }
-      .unit-list { display:flex; flex-direction:column; gap:8px; }
+      .unit-list { display:flex; flex-direction:column; gap:2px; }
       .unit-item {
         display:flex;
+        align-items:center;
         justify-content:space-between;
-        gap:8px;
-        border:1px solid rgba(255,255,255,.1);
-        border-radius:10px;
-        padding:10px;
-        background:rgba(255,255,255,.02);
+        gap:10px;
+        padding:10px 2px;
       }
+      .unit-left {
+        display:flex;
+        align-items:center;
+        gap:12px;
+        min-width:0;
+      }
+      .unit-thumb {
+        width:58px;
+        height:58px;
+        border-radius:8px;
+        border:1px solid rgba(255,255,255,.08);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#fff;
+        font-weight:800;
+        font-size:18px;
+        flex:0 0 58px;
+      }
+      .unit-text { min-width:0; }
+      .unit-title {
+        font-size:17px;
+        font-weight:800;
+        line-height:1.2;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .unit-subtitle {
+        margin-top:4px;
+        color:rgba(255,255,255,.68);
+        font-size:14px;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
+      .unit-more {
+        width:22px;
+        height:22px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:rgba(255,255,255,.72);
+        flex:0 0 22px;
+      }
+      .unit-more svg { width:18px; height:18px; fill:currentColor; }
       .debug-box { margin-top:10px; padding:10px; border-radius:10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); font-size:12px; white-space:pre-wrap; word-break:break-word; display:none; }
       .debug-box.on { display:block; }
       .sensor-card-pressable { cursor:pointer; }
@@ -258,7 +302,7 @@
         </section>
 
         <section id="view-archive" class="view">
-          <div class="card" style="margin-top:12px;">
+          <div class="card" style="margin-top:12px; background:#0f0d1f; border-color:rgba(255,255,255,.08);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
               <strong id="archive-title">보관함</strong>
               <span class="muted" id="archive-count">0개</span>
