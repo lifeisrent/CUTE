@@ -14,15 +14,17 @@
 
 ## 구조
 - `apps/mobile-web` : 사용자 모바일 웹 UI
-- `services/realtime-db` : 실시간 데이터 저장/조회 API
-- `services/mock-sensor` : 가짜 센서 이벤트 생성기
+- `services/realtime-db` : 실시간 데이터 저장/조회 API (backend-core)
+- `services/mock-sensor` : 가짜 센서 이벤트/RAW 프레임 생성기
+- `services/modbus-driver` : Modbus RTU raw frame 파싱 + collector 전달
 
 ## 로컬 실행
 ```bash
 npm install
 npm run dev:core   # terminal 1
 npm run dev:sensor # terminal 2
-npm run dev:web    # terminal 3
+npm run dev:driver # terminal 3 (modbus 파싱 테스트)
+npm run dev:web    # terminal 4
 ```
 
 접속: `http://localhost:3200`

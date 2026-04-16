@@ -9,10 +9,12 @@
   "scripts": {
     "dev:core": "npm run dev --workspace services/realtime-db",
     "dev:sensor": "npm run dev --workspace services/mock-sensor",
+    "dev:driver": "npm run dev --workspace services/modbus-driver",
     "dev:web": "npm run dev --workspace apps/mobile-web",
     "dev:web-react": "npm run dev --workspace @cute/mobile-web-react",
     "start:core": "npm run start --workspace services/realtime-db",
     "start:sensor": "npm run start --workspace services/mock-sensor",
+    "start:driver": "npm run start --workspace services/modbus-driver",
     "start:web": "npm run start --workspace apps/mobile-web"
   }
 }

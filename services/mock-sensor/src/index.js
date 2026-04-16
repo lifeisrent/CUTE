@@ -9,6 +9,7 @@ const COLLECTOR_URL = process.env.COLLECTOR_URL || "http://localhost:3000/collec
 const SENSOR_ID = process.env.SENSOR_ID || "mock-1";
 const SENSOR_INTERVAL_MS = Number(process.env.SENSOR_INTERVAL_MS || 1000);
 const ADAPTER_KIND = (process.env.SENSOR_ADAPTER || "mock").toLowerCase();
+const OUTPUT_MODE = (process.env.SENSOR_OUTPUT_MODE || "collector").toLowerCase(); // collector | raw
 
 const adapterRegistry = {
   mock: new MockAdapter(),
@@ -25,7 +26,68 @@ const runtime = {
   consecutiveFailures: 0,
   lastSendAt: null,
   lastError: null,
+  lastRawFrameAt: null,
+  lastRawFrameHex: null,
 };
+
+function id(prefix = "id") {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function modbusCrc16(bytes) {
+  let crc = 0xffff;
+  for (const b of bytes) {
+    crc ^= b;
+    for (let i = 0; i < 8; i += 1) {
+      const lsb = crc & 0x0001;
+      crc >>= 1;
+      if (lsb) crc ^= 0xA001;
+    }
+  }
+  return crc & 0xffff;
+}
+
+function toHex(bytes) {
+  return bytes.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function createRawModbusRtuFrame() {
+  // Modbus RTU response example:
+  // [slaveId, functionCode, byteCount, reg1_hi, reg1_lo, reg2_hi, ... , crc_lo, crc_hi]
+  const slaveId = 1;
+  const functionCode = 0x03; // Read Holding Registers response
+
+  // register mapping (scaled int):
+  // 0: temperature*10, 1: humidity*10, 2: power(W)
+  const temp = clamp(Math.round((20 + Math.random() * 8) * 10), 150, 380);
+  const hum = clamp(Math.round((35 + Math.random() * 25) * 10), 100, 980);
+  const power = clamp(Math.round(250 + Math.random() * 1200), 0, 5000);
+
+  const registers = [temp, hum, power];
+  const payload = [];
+  for (const reg of registers) {
+    payload.push((reg >> 8) & 0xff, reg & 0xff);
+  }
+
+  const frameNoCrc = [slaveId, functionCode, payload.length, ...payload];
+  const crc = modbusCrc16(frameNoCrc);
+  const frame = [...frameNoCrc, crc & 0xff, (crc >> 8) & 0xff];
+
+  return {
+    frameId: id("frm"),
+    sensorId: SENSOR_ID,
+    protocol: "modbus-rtu",
+    slaveId,
+    functionCode,
+    registerCount: registers.length,
+    rawHex: toHex(frame),
+    createdAt: new Date().toISOString(),
+  };
+}
 
 function normalizeForCollector(raw) {
   return {
@@ -59,6 +121,15 @@ let timer = null;
 
 async function tickOnce() {
   if (!runtime.commEnabled) return;
+
+  if (OUTPUT_MODE === "raw") {
+    const frame = createRawModbusRtuFrame();
+    runtime.lastRawFrameAt = frame.createdAt;
+    runtime.lastRawFrameHex = frame.rawHex;
+    runtime.lastSendAt = frame.createdAt;
+    return;
+  }
+
   const raws = await adapter.read();
   for (const raw of raws) {
     const event = normalizeForCollector(raw);
@@ -102,6 +173,7 @@ app.get("/health", (_req, res) => {
     collector: COLLECTOR_URL,
     sensorId: SENSOR_ID,
     adapter: adapter.kind,
+    outputMode: OUTPUT_MODE,
     state: runtime.state,
   });
 });
@@ -112,15 +184,28 @@ app.get("/status", (_req, res) => {
     ok: true,
     sensorId: SENSOR_ID,
     adapter: adapter.kind,
+    outputMode: OUTPUT_MODE,
     commEnabled: runtime.commEnabled,
     loopRunning: runtime.loopRunning,
     state: runtime.state,
     consecutiveFailures: runtime.consecutiveFailures,
     lastSendAt: runtime.lastSendAt,
     lastError: runtime.lastError,
+    lastRawFrameAt: runtime.lastRawFrameAt,
     controlState,
     adapterHealth: adapter.health(),
   });
+});
+
+app.get("/raw/frame", (_req, res) => {
+  if (!runtime.commEnabled) {
+    return res.status(503).json({ ok: false, error: "comm-disabled", state: runtime.state });
+  }
+
+  const frame = createRawModbusRtuFrame();
+  runtime.lastRawFrameAt = frame.createdAt;
+  runtime.lastRawFrameHex = frame.rawHex;
+  return res.json({ ok: true, ...frame, state: runtime.state });
 });
 
 app.post("/comm/on", express.json({ limit: "64kb" }), (_req, res) => {
@@ -197,7 +282,7 @@ app.post("/emit-once", async (_req, res) => {
 app.listen(PORT, async () => {
   await adapter.start({ sensorId: SENSOR_ID });
   runtime.state = "INIT";
-  console.log(`[mock-sensor] listening on :${PORT} (adapter=${adapter.kind})`);
+  console.log(`[mock-sensor] listening on :${PORT} (adapter=${adapter.kind}, output=${OUTPUT_MODE})`);
   startLoop();
 });
 

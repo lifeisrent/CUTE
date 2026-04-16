@@ -48,3 +48,6 @@
 47,아키텍처,책임 분리,"sensor 드라이버/collector lifecycle/core monitor/ingest 책임 분리 방향 정의"
 48,collector 모니터,백엔드,"backend-core에 collectorMonitor 상태 및 /collector/status API 추가 (UNKNOWN/HEALTHY/STALE 중심)"
 49,collector 모니터,웹앱,"기존 mobile-web 로그 탭에 Collector 상태 배지/메타 표시 및 수동 갱신 버튼 추가"
+50,아키텍처 분리,드라이버,"raw 데이터 파싱 책임을 mock-sensor에서 분리해 modbus-driver 프로세스로 이관"
+51,modbus rtu,파싱 구현,"modbus RTU CRC 검증 + 레지스터 파싱(temperature/humidity/power) 후 collector 전달"
+52,mock-sensor,raw 출력,"mock-sensor에 raw frame endpoint(/raw/frame)와 output mode(raw|collector) 추가"
