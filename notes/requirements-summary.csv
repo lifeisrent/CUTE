@@ -56,3 +56,5 @@
 55,보관함,드라이버 표시,"MODBUS_DRIVER_STATUS_URL 미설정이어도 보관함 서비스 목록에 modbus-driver 항목이 항상 표시되도록 개선"
 56,파이프라인 강제,수집 정책,"mock-sensor->collector 직송 차단(ENFORCE_DRIVER_PIPELINE) 및 raw->modbus-driver->collect 경로 강제"
 57,수집 차단,백엔드,"backend-core /collect에서 source=A 직송을 403(errorCode 4105)로 거부"
+58,프로젝트 종료 기준,운영 전략,"CUTE 종료 기준 10개(재시작 복구/페일오버/파이프라인 강제/가시성/부하테스트/대응 회고) 문서화"
+59,부하 대응,운영 역량,"대량 트래픽 테스트 재현 가능성과 대응 경험(병목 식별/완화/지표 비교)을 종료 조건으로 명시"
